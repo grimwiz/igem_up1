@@ -2,6 +2,8 @@
 
 export const GAS_SIZING_DATA_VERSION = '2024-06-01';
 
+export const DIAPHRAGM_PURGE_MULTIPLIER = 5;
+
 export const DIAPHRAGM_METERS = [
   { meter: 'U6', installVolume_m3: 0.008, purgeVolume_m3: 0.002 },
   { meter: 'U16', installVolume_m3: 0.025, purgeVolume_m3: 0.006 },
@@ -33,51 +35,258 @@ export const ROTARY_METERS = [
   { meter: 'DN500', installVolume_m3: 0.5, purgeVolume_m3: 0.125 }
 ];
 
-export const PIPES = [
-  { dn: 'DN15', volumePerMeter_m3: 0.00024 },
-  { dn: 'DN20', volumePerMeter_m3: 0.00046 },
-  { dn: 'DN25', volumePerMeter_m3: 0.00064 },
-  { dn: 'DN32', volumePerMeter_m3: 0.0011 },
-  { dn: 'DN40', volumePerMeter_m3: 0.0015 },
-  { dn: 'DN50', volumePerMeter_m3: 0.0024 },
-  { dn: 'DN65', volumePerMeter_m3: 0.0038 },
-  { dn: 'DN80', volumePerMeter_m3: 0.0054 },
-  { dn: 'DN100', volumePerMeter_m3: 0.009 },
-  { dn: 'DN125', volumePerMeter_m3: 0.014 },
-  { dn: 'DN150', volumePerMeter_m3: 0.02 },
-  { dn: 'DN200', volumePerMeter_m3: 0.035 },
-  { dn: 'DN250', volumePerMeter_m3: 0.053 },
-  { dn: 'DN300', volumePerMeter_m3: 0.074 },
-  { dn: 'DN350', volumePerMeter_m3: 0.089 },
-  { dn: 'DN400', volumePerMeter_m3: 0.118 },
-  { dn: 'DN450', volumePerMeter_m3: 0.151 },
-  { dn: '15mm Cu', volumePerMeter_m3: 0.00014 },
-  { dn: '22mm Cu', volumePerMeter_m3: 0.00032 },
-  { dn: '28mm Cu', volumePerMeter_m3: 0.00054 },
-  { dn: '35mm Cu', volumePerMeter_m3: 0.00084 },
-  { dn: '42mm Cu', volumePerMeter_m3: 0.0012 },
-  { dn: '54mm Cu', volumePerMeter_m3: 0.0021 },
-  { dn: '67mm CU', volumePerMeter_m3: 0.0033 }
+export const PIPE_LIBRARY = [
+  {
+    id: 'DN15',
+    label: 'DN15 carbon steel tube',
+    category: 'pipe',
+    volumePerMeter_m3: 0.00024,
+    source: 'IGEM/UP/1 Table 4 — carbon steel pipe internal volume per metre.'
+  },
+  {
+    id: 'DN20',
+    label: 'DN20 carbon steel tube',
+    category: 'pipe',
+    volumePerMeter_m3: 0.00046,
+    source: 'IGEM/UP/1 Table 4 — carbon steel pipe internal volume per metre.'
+  },
+  {
+    id: 'DN25',
+    label: 'DN25 carbon steel tube',
+    category: 'pipe',
+    volumePerMeter_m3: 0.00064,
+    source: 'IGEM/UP/1 Table 4 — carbon steel pipe internal volume per metre.'
+  },
+  {
+    id: 'DN32',
+    label: 'DN32 carbon steel tube',
+    category: 'pipe',
+    volumePerMeter_m3: 0.0011,
+    source: 'IGEM/UP/1 Table 4 — carbon steel pipe internal volume per metre.'
+  },
+  {
+    id: 'DN40',
+    label: 'DN40 carbon steel tube',
+    category: 'pipe',
+    volumePerMeter_m3: 0.0015,
+    source: 'IGEM/UP/1 Table 4 — carbon steel pipe internal volume per metre.'
+  },
+  {
+    id: 'DN50',
+    label: 'DN50 carbon steel tube',
+    category: 'pipe',
+    volumePerMeter_m3: 0.0024,
+    source: 'IGEM/UP/1 Table 4 — carbon steel pipe internal volume per metre.'
+  },
+  {
+    id: 'DN65',
+    label: 'DN65 carbon steel tube',
+    category: 'pipe',
+    volumePerMeter_m3: 0.0038,
+    source: 'IGEM/UP/1 Table 4 — carbon steel pipe internal volume per metre.'
+  },
+  {
+    id: 'DN80',
+    label: 'DN80 carbon steel tube',
+    category: 'pipe',
+    volumePerMeter_m3: 0.0054,
+    source: 'IGEM/UP/1 Table 4 — carbon steel pipe internal volume per metre.'
+  },
+  {
+    id: 'DN100',
+    label: 'DN100 carbon steel tube',
+    category: 'pipe',
+    volumePerMeter_m3: 0.009,
+    source: 'IGEM/UP/1 Table 4 — carbon steel pipe internal volume per metre.'
+  },
+  {
+    id: 'DN125',
+    label: 'DN125 carbon steel tube',
+    category: 'pipe',
+    volumePerMeter_m3: 0.014,
+    source: 'IGEM/UP/1 Table 4 — carbon steel pipe internal volume per metre.'
+  },
+  {
+    id: 'DN150',
+    label: 'DN150 carbon steel tube',
+    category: 'pipe',
+    volumePerMeter_m3: 0.02,
+    source: 'IGEM/UP/1 Table 4 — carbon steel pipe internal volume per metre.'
+  },
+  {
+    id: 'DN200',
+    label: 'DN200 carbon steel tube',
+    category: 'pipe',
+    volumePerMeter_m3: 0.035,
+    source: 'IGEM/UP/1 Table 4 — carbon steel pipe internal volume per metre.'
+  },
+  {
+    id: 'DN250',
+    label: 'DN250 carbon steel tube',
+    category: 'pipe',
+    volumePerMeter_m3: 0.053,
+    source: 'IGEM/UP/1 Table 4 — carbon steel pipe internal volume per metre.'
+  },
+  {
+    id: 'DN300',
+    label: 'DN300 carbon steel tube',
+    category: 'pipe',
+    volumePerMeter_m3: 0.074,
+    source: 'IGEM/UP/1 Table 4 — carbon steel pipe internal volume per metre.'
+  },
+  {
+    id: 'DN350',
+    label: 'DN350 carbon steel tube',
+    category: 'pipe',
+    volumePerMeter_m3: 0.089,
+    source: 'IGEM/UP/1 Table 4 — carbon steel pipe internal volume per metre.'
+  },
+  {
+    id: 'DN400',
+    label: 'DN400 carbon steel tube',
+    category: 'pipe',
+    volumePerMeter_m3: 0.118,
+    source: 'IGEM/UP/1 Table 4 — carbon steel pipe internal volume per metre.'
+  },
+  {
+    id: 'DN450',
+    label: 'DN450 carbon steel tube',
+    category: 'pipe',
+    volumePerMeter_m3: 0.151,
+    source: 'IGEM/UP/1 Table 4 — carbon steel pipe internal volume per metre.'
+  },
+  {
+    id: '15mm Cu',
+    label: '15 mm copper tube',
+    category: 'pipe',
+    volumePerMeter_m3: 0.00014,
+    source: 'IGEM/UP/1 Table 4 — copper pipe internal volume per metre.'
+  },
+  {
+    id: '22mm Cu',
+    label: '22 mm copper tube',
+    category: 'pipe',
+    volumePerMeter_m3: 0.00032,
+    source: 'IGEM/UP/1 Table 4 — copper pipe internal volume per metre.'
+  },
+  {
+    id: '28mm Cu',
+    label: '28 mm copper tube',
+    category: 'pipe',
+    volumePerMeter_m3: 0.00054,
+    source: 'IGEM/UP/1 Table 4 — copper pipe internal volume per metre.'
+  },
+  {
+    id: '35mm Cu',
+    label: '35 mm copper tube',
+    category: 'pipe',
+    volumePerMeter_m3: 0.00084,
+    source: 'IGEM/UP/1 Table 4 — copper pipe internal volume per metre.'
+  },
+  {
+    id: '42mm Cu',
+    label: '42 mm copper tube',
+    category: 'pipe',
+    volumePerMeter_m3: 0.0012,
+    source: 'IGEM/UP/1 Table 4 — copper pipe internal volume per metre.'
+  },
+  {
+    id: '54mm Cu',
+    label: '54 mm copper tube',
+    category: 'pipe',
+    volumePerMeter_m3: 0.0021,
+    source: 'IGEM/UP/1 Table 4 — copper pipe internal volume per metre.'
+  },
+  {
+    id: '67mm Cu',
+    label: '67 mm copper tube',
+    category: 'pipe',
+    volumePerMeter_m3: 0.0033,
+    source: 'IGEM/UP/1 Table 4 — copper pipe internal volume per metre.'
+  }
 ];
 
-export const PURGE_HOSE = [
-  { size: '100mm', hoseVolume_m3: 0.009 },
-  { size: '125mm', hoseVolume_m3: 0.014 },
-  { size: '15', hoseVolume_m3: NaN },
-  { size: '150mm', hoseVolume_m3: 0.02 },
-  { size: '200mm', hoseVolume_m3: 0.035 },
-  { size: '20mm', hoseVolume_m3: 0.00046 },
-  { size: '25mm', hoseVolume_m3: 0.00064 },
-  { size: '30', hoseVolume_m3: NaN },
-  { size: '32mm', hoseVolume_m3: 0.0011 },
-  { size: '40mm', hoseVolume_m3: 0.0015 },
-  { size: '45', hoseVolume_m3: NaN },
-  { size: '50mm', hoseVolume_m3: 0.0024 },
-  { size: '60', hoseVolume_m3: NaN },
-  { size: '65mm', hoseVolume_m3: 0.0038 },
-  { size: '80mm', hoseVolume_m3: 0.0054 },
-  { size: 'TTD Max', hoseVolume_m3: NaN }
+export const PURGE_HOSES = [
+  {
+    id: 'Purge hose 20mm',
+    label: '20 mm purge hose',
+    category: 'purge-hose',
+    volumePerMeter_m3: 0.00046,
+    source: 'IGEM/UP/1 Table 4 — flexible purge hose internal volume per metre.'
+  },
+  {
+    id: 'Purge hose 25mm',
+    label: '25 mm purge hose',
+    category: 'purge-hose',
+    volumePerMeter_m3: 0.00064,
+    source: 'IGEM/UP/1 Table 4 — flexible purge hose internal volume per metre.'
+  },
+  {
+    id: 'Purge hose 32mm',
+    label: '32 mm purge hose',
+    category: 'purge-hose',
+    volumePerMeter_m3: 0.0011,
+    source: 'IGEM/UP/1 Table 4 — flexible purge hose internal volume per metre.'
+  },
+  {
+    id: 'Purge hose 40mm',
+    label: '40 mm purge hose',
+    category: 'purge-hose',
+    volumePerMeter_m3: 0.0015,
+    source: 'IGEM/UP/1 Table 4 — flexible purge hose internal volume per metre.'
+  },
+  {
+    id: 'Purge hose 50mm',
+    label: '50 mm purge hose',
+    category: 'purge-hose',
+    volumePerMeter_m3: 0.0024,
+    source: 'IGEM/UP/1 Table 4 — flexible purge hose internal volume per metre.'
+  },
+  {
+    id: 'Purge hose 65mm',
+    label: '65 mm purge hose',
+    category: 'purge-hose',
+    volumePerMeter_m3: 0.0038,
+    source: 'IGEM/UP/1 Table 4 — flexible purge hose internal volume per metre.'
+  },
+  {
+    id: 'Purge hose 80mm',
+    label: '80 mm purge hose',
+    category: 'purge-hose',
+    volumePerMeter_m3: 0.0054,
+    source: 'IGEM/UP/1 Table 4 — flexible purge hose internal volume per metre.'
+  },
+  {
+    id: 'Purge hose 100mm',
+    label: '100 mm purge hose',
+    category: 'purge-hose',
+    volumePerMeter_m3: 0.009,
+    source: 'IGEM/UP/1 Table 4 — flexible purge hose internal volume per metre.'
+  },
+  {
+    id: 'Purge hose 125mm',
+    label: '125 mm purge hose',
+    category: 'purge-hose',
+    volumePerMeter_m3: 0.014,
+    source: 'IGEM/UP/1 Table 4 — flexible purge hose internal volume per metre.'
+  },
+  {
+    id: 'Purge hose 150mm',
+    label: '150 mm purge hose',
+    category: 'purge-hose',
+    volumePerMeter_m3: 0.02,
+    source: 'IGEM/UP/1 Table 4 — flexible purge hose internal volume per metre.'
+  },
+  {
+    id: 'Purge hose 200mm',
+    label: '200 mm purge hose',
+    category: 'purge-hose',
+    volumePerMeter_m3: 0.035,
+    source: 'IGEM/UP/1 Table 4 — flexible purge hose internal volume per metre.'
+  }
 ];
+
+export const PIPE_SEGMENT_LIBRARY = [...PIPE_LIBRARY, ...PURGE_HOSES];
 
 export const TABLE6 = [
   { gauge: 'Water SG', range: '0-120', GRM: 0.5, TTD_Max: 30 },
@@ -131,11 +340,9 @@ export const OPERATING_FACTORS_F3 = [
 const mapFromMeters = (meters) =>
   Object.fromEntries(meters.map((m) => [m.meter, { install: m.installVolume_m3, purge: m.purgeVolume_m3 }]));
 
-// Convenience maps (by key)
-export const PIPE_MAP = Object.fromEntries(PIPES.map((p) => [p.dn, p.volumePerMeter_m3]));
+export const PIPE_MAP = Object.fromEntries(PIPE_SEGMENT_LIBRARY.map((entry) => [entry.id, entry]));
 export const DIAPHRAGM_METER_MAP = mapFromMeters(DIAPHRAGM_METERS);
 export const ROTARY_METER_MAP = mapFromMeters(ROTARY_METERS);
-export const HOSE_MAP = Object.fromEntries(PURGE_HOSE.map((h) => [h.size, h.hoseVolume_m3]));
 export const F1_MAP = Object.fromEntries(GAS_FACTORS_F1.map((g) => [g.gas.toLowerCase(), { gas: g.F1_gas, n2: g.F1_n2 }]));
 export const F3_MAP = Object.fromEntries(OPERATING_FACTORS_F3.map((g) => [g.gas.toLowerCase(), { gas: g.F3_gas, n2: g.F3_n2 }]));
 export const TABLE6_MAP = Object.fromEntries(
@@ -145,11 +352,16 @@ export const TABLE12_MAP = Object.fromEntries(TABLE12.map((e) => [e.dn, { f1: e.
 
 export const DEFAULT_PURGE_MULTIPLIER = 1.5;
 
+export function getPipeSegment(dn) {
+  const entry = PIPE_MAP[dn];
+  if (!entry) throw new Error(`Unknown pipe or purge hose: ${dn}`);
+  return entry;
+}
+
 export function pipeInstallVolume(dn, length_m) {
-  const vpm = PIPE_MAP[dn];
-  if (vpm == null) throw new Error(`Unknown pipe DN: ${dn}`);
+  const entry = getPipeSegment(dn);
   if (length_m == null) throw new Error(`Length required for pipe ${dn}`);
-  return vpm * Number(length_m);
+  return entry.volumePerMeter_m3 * Number(length_m);
 }
 
 export function pipePurgeVolume(dn, length_m, purgeMultiplier = DEFAULT_PURGE_MULTIPLIER) {
@@ -171,14 +383,12 @@ const getMeterVolumes = (map, meterName) => {
  * @param {Array<{dn:string, length_m:number}>} pipes - list of pipe segments.
  * @param {string|null} diaphragmMeter - selected diaphragm meter.
  * @param {string|null} rotaryMeter - selected rotary meter.
- * @param {string|null} purgeHoseSize - optional purge hose size to include.
  * @param {number} purgeMultiplier - optional override for pipe purge multiplier.
  */
 export function computeTotals({
   pipes = [],
   diaphragmMeter = null,
   rotaryMeter = null,
-  purgeHoseSize = null,
   purgeMultiplier = DEFAULT_PURGE_MULTIPLIER
 } = {}) {
   const pipeInstall = pipes.reduce((sum, seg) => sum + pipeInstallVolume(seg.dn, seg.length_m), 0);
@@ -186,27 +396,114 @@ export function computeTotals({
 
   const diaphragmVolumes = getMeterVolumes(DIAPHRAGM_METER_MAP, diaphragmMeter);
   const rotaryVolumes = getMeterVolumes(ROTARY_METER_MAP, rotaryMeter);
+  const diaphragmPurgeAllowance = diaphragmVolumes.purge * DIAPHRAGM_PURGE_MULTIPLIER;
 
-  const hoseVol = purgeHoseSize ? HOSE_MAP[purgeHoseSize] ?? 0 : 0;
-
-  const systemComponentsVolume =
-    pipeInstall + diaphragmVolumes.install + rotaryVolumes.install + (Number.isFinite(hoseVol) ? hoseVol : 0);
+  const systemComponentsVolume = pipeInstall + diaphragmVolumes.install + rotaryVolumes.install;
   const fittingsAllowance = systemComponentsVolume * 0.1;
   const estimatedSystemVolume = systemComponentsVolume + fittingsAllowance;
 
   return {
     installVolume_m3: pipeInstall + diaphragmVolumes.install + rotaryVolumes.install,
-    purgeVolume_m3: pipePurge + diaphragmVolumes.purge + rotaryVolumes.purge + hoseVol,
+    purgeVolume_m3: pipePurge + diaphragmPurgeAllowance + rotaryVolumes.purge,
     fittingsAllowance_m3: fittingsAllowance,
     estimatedSystemVolume_m3: estimatedSystemVolume,
     breakdown: {
       pipeInstall_m3: pipeInstall,
       pipePurge_m3: pipePurge,
       diaphragmInstall_m3: diaphragmVolumes.install,
-      diaphragmPurge_m3: diaphragmVolumes.purge,
+      diaphragmPurge_m3: diaphragmPurgeAllowance,
       rotaryInstall_m3: rotaryVolumes.install,
-      rotaryPurge_m3: rotaryVolumes.purge,
-      purgeHose_m3: hoseVol
+      rotaryPurge_m3: rotaryVolumes.purge
     }
   };
 }
+
+export const STANDARD_REFERENCE_TABLES = [
+  {
+    id: 'diaphragm-meter-table',
+    title: 'IGEM/UP/1 Table 3 — Diaphragm meter allowances',
+    summary:
+      `Volume allowances for diaphragm meters used when calculating installation volumes and purge requirements for meter sets. The purge allowance column is multiplied by ${DIAPHRAGM_PURGE_MULTIPLIER} when estimating purge gas volume.`,
+    columns: [
+      { key: 'meter', label: 'Meter designation' },
+      { key: 'installVolume_m3', label: 'Installation allowance (m³)' },
+      { key: 'purgeVolume_m3', label: 'Table 3 purge allowance (m³)' }
+    ],
+    rows: DIAPHRAGM_METERS
+  },
+  {
+    id: 'rotary-meter-table',
+    title: 'IGEM/UP/1 Table 3 — Rotary meter allowances',
+    summary:
+      'Rotary meter installation and purge allowances used when the installation includes rotary or turbine style meters.',
+    columns: [
+      { key: 'meter', label: 'Meter designation' },
+      { key: 'installVolume_m3', label: 'Installation allowance (m³)' },
+      { key: 'purgeVolume_m3', label: 'Table 3 purge allowance (m³)' }
+    ],
+    rows: ROTARY_METERS
+  },
+  {
+    id: 'pipe-and-hose-table',
+    title: 'IGEM/UP/1 Table 4 — Pipe and purge hose volumes',
+    summary:
+      'Internal volume per metre for carbon steel, copper and purge hose sections. These values build the installation volume for the pipe schedule.',
+    columns: [
+      { key: 'label', label: 'Size' },
+      { key: 'category', label: 'Component type' },
+      { key: 'volumePerMeter_m3', label: 'Volume per metre (m³)' }
+    ],
+    rows: PIPE_SEGMENT_LIBRARY
+  },
+  {
+    id: 'pressure-gauge-table',
+    title: 'IGEM/UP/1 Table 6 — Pressure gauge selection',
+    summary:
+      'Recommended pressure gauges, ranges and multipliers for tightness testing across the IGEM/UP/1 procedure.',
+    columns: [
+      { key: 'gauge', label: 'Instrument type' },
+      { key: 'range', label: 'Range (mbar)' },
+      { key: 'GRM', label: 'Gauge reading multiplier (GRM)' },
+      { key: 'TTD_Max', label: 'Max tightness test duration (min)' }
+    ],
+    rows: TABLE6
+  },
+  {
+    id: 'purge-factors-table',
+    title: 'IGEM/UP/1 Table 12 — Purge factors for large pipework',
+    summary:
+      'Scaling factors applied when calculating purge volumes for large diameter pipe systems where the standard multipliers require adjustment.',
+    columns: [
+      { key: 'dn', label: 'Nominal diameter' },
+      { key: 'f1', label: 'Factor f1' },
+      { key: 'f2', label: 'Factor f2' },
+      { key: 'f3', label: 'Factor f3' },
+      { key: 'f4', label: 'Factor f4' }
+    ],
+    rows: TABLE12
+  },
+  {
+    id: 'gas-factor-f1-table',
+    title: 'IGEM/UP/1 gas factor F1 reference',
+    summary:
+      'Gas factor F1 for common fuel gases and nitrogen, used when determining purge flow rates and volumes.',
+    columns: [
+      { key: 'gas', label: 'Gas family' },
+      { key: 'F1_gas', label: 'F1 (gas purge)' },
+      { key: 'F1_n2', label: 'F1 (nitrogen purge)' }
+    ],
+    rows: GAS_FACTORS_F1
+  },
+  {
+    id: 'gas-factor-f3-table',
+    title: 'IGEM/UP/1 operating factor F3 reference',
+    summary:
+      'Operating factor F3 used alongside F1 when planning purge durations for natural gas and LPG variants.',
+    columns: [
+      { key: 'gas', label: 'Gas family' },
+      { key: 'F3_gas', label: 'F3 (gas purge)' },
+      { key: 'F3_n2', label: 'F3 (nitrogen purge)' }
+    ],
+    rows: OPERATING_FACTORS_F3
+  }
+];

@@ -135,8 +135,8 @@
         <h3>Pipe, meter and purge volume estimator</h3>
         <p>
           Build the IGEM/UP/1 Table 3 and Table 4 volumes directly in the browser. Add every pipe segment that forms part of the
-          test, select the installed diaphragm or rotary meters, and include any purge hose to replicate the worksheet logic.
-          Pipe purge volumes use the same multiplier defined in IGEM/UP/1 Sheet 1.
+          test, including purge hoses listed alongside the pipe sizes, and select the installed diaphragm or rotary meters to
+          replicate the worksheet logic. Pipe purge volumes use the same multiplier defined in IGEM/UP/1 Sheet 1.
         </p>
         <div class="pipe-table-wrapper">
           <table class="pipe-table">
@@ -162,10 +162,6 @@
           <div>
             <label for="rotary-meter-select">Rotary meter (Table 3)</label>
             <select id="rotary-meter-select"></select>
-          </div>
-          <div>
-            <label for="purge-hose-size">Purge hose size (Table 4)</label>
-            <select id="purge-hose-size"></select>
           </div>
           <div>
             <label for="purge-multiplier">
@@ -215,6 +211,17 @@
           </div>
         </details>
         <input type="hidden" id="pipe-configuration" />
+      </div>
+    </section>
+
+    <section id="igem-reference-data" class="reference-data-section">
+      <h2>IGEM/UP/1 Reference Tables</h2>
+      <p>
+        The planning data used by this tool is reproduced below for quick cross-checking. Each table summarises the relevant
+        IGEM/UP/1 allowances so engineers can validate their inputs without leaving the application.
+      </p>
+      <div id="igem-reference-table-container" class="reference-table-container">
+        <p>Reference tables load automatically when JavaScript is enabled.</p>
       </div>
     </section>
 
