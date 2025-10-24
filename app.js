@@ -1,421 +1,798 @@
-(() => {
-  'use strict';
+import {
+  PIPE_MAP,
+  METER_MAP,
+  HOSE_MAP,
+  computeTotals,
+  DEFAULT_PURGE_MULTIPLIER,
+  pipeInstallVolume,
+  pipePurgeVolume
+} from './gasSizingData.js';
 
-  const STORAGE_KEY = 'igem-up1-procedure';
-  const INPUT_SELECTOR =
-    'input[type="text"], input[type="number"], input[type="date"], textarea, select, input[type="checkbox"]';
+const STORAGE_KEY = 'igem-up1-procedure';
+const INPUT_SELECTOR =
+  'input[type="text"], input[type="number"], input[type="date"], input[type="hidden"], textarea, select, input[type="checkbox"]';
 
-  const registerServiceWorker = () => {
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker
-          .register('./sw.js')
-          .catch((error) => console.error('Service worker registration failed:', error));
+const registerServiceWorker = () => {
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker
+        .register('./sw.js')
+        .catch((error) => console.error('Service worker registration failed:', error));
+    });
+  }
+};
+
+const inputs = Array.from(document.querySelectorAll(INPUT_SELECTOR));
+
+const dispatchDataUpdated = () => {
+  document.dispatchEvent(new Event('procedure-data-updated'));
+};
+
+const applyInputData = (data = {}) => {
+  inputs.forEach((input) => {
+    if (!input.id) return;
+    if (input.type === 'checkbox') {
+      input.checked = Boolean(data[input.id]);
+    } else if (Object.prototype.hasOwnProperty.call(data, input.id)) {
+      input.value = data[input.id] ?? '';
+    } else if (input.tagName !== 'SELECT') {
+      input.value = '';
+    }
+  });
+  dispatchDataUpdated();
+};
+
+const serialiseFormData = () => {
+  const data = {};
+  inputs.forEach((input) => {
+    if (!input.id) return;
+    if (input.type === 'checkbox') {
+      data[input.id] = input.checked;
+    } else {
+      data[input.id] = input.value;
+    }
+  });
+  return data;
+};
+
+const loadState = () => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return;
+    const parsed = JSON.parse(saved);
+    if (parsed && typeof parsed === 'object') {
+      applyInputData(parsed);
+    }
+  } catch (error) {
+    console.error('Could not load saved state', error);
+  }
+};
+
+const saveState = () => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(serialiseFormData()));
+  } catch (error) {
+    console.error('Could not persist state', error);
+  }
+};
+
+const readNumber = (input) => {
+  if (!input) return Number.NaN;
+  const value = parseFloat(input.value);
+  return Number.isFinite(value) ? value : Number.NaN;
+};
+
+const formatNumber = (value, decimals = 2) => {
+  if (!Number.isFinite(value)) return '—';
+  return Number(value).toFixed(decimals);
+};
+
+const formatVolume = (value) => formatNumber(value, 4);
+
+const normaliseLength = (value) => {
+  if (value === null || value === undefined || value === '') return 0;
+  if (typeof value === 'number') {
+    return Number.isFinite(value) && value >= 0 ? value : 0;
+  }
+  const numeric = parseFloat(String(value));
+  return Number.isFinite(numeric) && numeric >= 0 ? numeric : 0;
+};
+
+function initialisePipeCalculator() {
+  const pipeRowsBody = document.getElementById('pipe-rows');
+  const addPipeButton = document.getElementById('add-pipe-row');
+  const meterSelect = document.getElementById('meter-select');
+  const hoseSelect = document.getElementById('purge-hose-size');
+  const purgeMultiplierInput = document.getElementById('purge-multiplier');
+  const summary = document.getElementById('pipe-volume-summary');
+  const totalsBody = document.getElementById('pipe-volume-breakdown-body');
+  const segmentBody = document.getElementById('pipe-segment-breakdown-body');
+  const hiddenField = document.getElementById('pipe-configuration');
+
+  if (
+    !pipeRowsBody ||
+    !addPipeButton ||
+    !meterSelect ||
+    !hoseSelect ||
+    !purgeMultiplierInput ||
+    !summary ||
+    !totalsBody ||
+    !segmentBody ||
+    !hiddenField
+  ) {
+    return;
+  }
+
+  const pipeOptions = Object.keys(PIPE_MAP);
+  const meterOptions = Object.keys(METER_MAP).sort((a, b) => {
+    const aIsNoMeter = a.toLowerCase() === 'no meter';
+    const bIsNoMeter = b.toLowerCase() === 'no meter';
+    if (aIsNoMeter && !bIsNoMeter) return -1;
+    if (!aIsNoMeter && bIsNoMeter) return 1;
+    return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+  });
+  const hoseOptions = Object.keys(HOSE_MAP)
+    .filter((size) => Number.isFinite(HOSE_MAP[size]))
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+
+  meterSelect.innerHTML = meterOptions
+    .map((meter) => {
+      const label = meter.toLowerCase() === 'no meter' ? 'No Meter' : meter.toUpperCase();
+      return `<option value="${meter}">${label}</option>`;
+    })
+    .join('');
+
+  if (!meterSelect.value) {
+    const defaultMeter = meterOptions.find((item) => item.toLowerCase() === 'no meter') ?? meterOptions[0] ?? '';
+    meterSelect.value = defaultMeter;
+  }
+
+  hoseSelect.innerHTML = [
+    '<option value="">No purge hose</option>',
+    ...hoseOptions.map((size) => `<option value="${size}">${size}</option>`)
+  ].join('');
+
+  if (!hoseSelect.value) {
+    hoseSelect.value = '';
+  }
+
+  if (!purgeMultiplierInput.value) {
+    purgeMultiplierInput.value = DEFAULT_PURGE_MULTIPLIER.toFixed(1);
+  }
+
+  let pipeSegments = [];
+  const rowElements = [];
+
+  const ensureAtLeastOneSegment = () => {
+    if (!pipeOptions.length) return;
+    if (!pipeSegments.length) {
+      pipeSegments.push({ dn: pipeOptions[0], length_m: '' });
+    }
+  };
+
+  const persistSegments = (triggerSave = true) => {
+    if (!hiddenField) return;
+    const serialisable = pipeSegments.map((segment) => ({
+      dn: segment.dn,
+      length_m: segment.length_m ?? ''
+    }));
+    const serialised = JSON.stringify(serialisable);
+    if (serialised !== hiddenField.value) {
+      hiddenField.value = serialised;
+      if (triggerSave) {
+        hiddenField.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    }
+  };
+
+  const getSegmentsForTotals = () =>
+    pipeSegments.map((segment) => ({ dn: segment.dn, length_m: normaliseLength(segment.length_m) }));
+
+  const isMultiplierValid = () => {
+    const raw = parseFloat(purgeMultiplierInput.value);
+    return Number.isFinite(raw) && raw > 0;
+  };
+
+  const getPurgeMultiplier = () => {
+    const raw = parseFloat(purgeMultiplierInput.value);
+    return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_PURGE_MULTIPLIER;
+  };
+
+  const updateAllRowVolumes = (multiplierOverride) => {
+    rowElements.forEach((row) => row.updateVolumes(multiplierOverride));
+  };
+
+  const renderRows = () => {
+    rowElements.length = 0;
+    pipeRowsBody.innerHTML = '';
+    ensureAtLeastOneSegment();
+
+    pipeSegments.forEach((segment, index) => {
+      if (!pipeOptions.includes(segment.dn)) {
+        segment.dn = pipeOptions[0];
+      }
+      const row = document.createElement('tr');
+
+      const dnCell = document.createElement('td');
+      const dnSelect = document.createElement('select');
+      pipeOptions.forEach((option) => {
+        const opt = document.createElement('option');
+        opt.value = option;
+        opt.textContent = option;
+        dnSelect.appendChild(opt);
       });
-    }
-  };
+      dnSelect.value = segment.dn;
+      dnSelect.addEventListener('change', () => {
+        pipeSegments[index].dn = dnSelect.value;
+        updateAllRowVolumes();
+        persistSegments();
+        updateSummary();
+      });
+      dnCell.appendChild(dnSelect);
 
-  const inputs = Array.from(document.querySelectorAll(INPUT_SELECTOR));
+      const lengthCell = document.createElement('td');
+      const lengthInput = document.createElement('input');
+      lengthInput.type = 'number';
+      lengthInput.min = '0';
+      lengthInput.step = '0.01';
+      lengthInput.placeholder = '0.00';
+      lengthInput.value = segment.length_m ?? '';
+      lengthInput.addEventListener('input', () => {
+        pipeSegments[index].length_m = lengthInput.value === '' ? '' : lengthInput.value;
+        updateAllRowVolumes();
+        persistSegments();
+        updateSummary();
+      });
+      lengthCell.appendChild(lengthInput);
 
-  const dispatchDataUpdated = () => {
-    document.dispatchEvent(new Event('procedure-data-updated'));
-  };
+      const installCell = document.createElement('td');
+      installCell.classList.add('numeric');
+      const purgeCell = document.createElement('td');
+      purgeCell.classList.add('numeric');
 
-  const applyInputData = (data = {}) => {
-    inputs.forEach((input) => {
-      if (!input.id) return;
-      if (input.type === 'checkbox') {
-        input.checked = Boolean(data[input.id]);
-      } else if (Object.prototype.hasOwnProperty.call(data, input.id)) {
-        input.value = data[input.id] ?? '';
-      } else if (input.tagName !== 'SELECT') {
-        input.value = '';
-      }
+      const actionsCell = document.createElement('td');
+      const removeButton = document.createElement('button');
+      removeButton.type = 'button';
+      removeButton.textContent = 'Remove';
+      removeButton.className = 'table-action-button';
+      removeButton.disabled = pipeSegments.length <= 1;
+      removeButton.title = pipeSegments.length <= 1 ? 'At least one segment is required' : '';
+      removeButton.addEventListener('click', () => {
+        if (pipeSegments.length <= 1) return;
+        pipeSegments.splice(index, 1);
+        renderRows();
+        persistSegments();
+        updateSummary();
+      });
+      actionsCell.appendChild(removeButton);
+
+      const updateRowVolumes = (multiplierOverride) => {
+        const multiplier = typeof multiplierOverride === 'number' ? multiplierOverride : getPurgeMultiplier();
+        const lengthValue = normaliseLength(pipeSegments[index]?.length_m);
+        let installVolume = Number.NaN;
+        let purgeVolume = Number.NaN;
+        try {
+          installVolume = pipeInstallVolume(pipeSegments[index].dn, lengthValue);
+          purgeVolume = pipePurgeVolume(pipeSegments[index].dn, lengthValue, multiplier);
+        } catch (error) {
+          console.error('Pipe segment calculation failed', error);
+        }
+        installCell.textContent = formatVolume(installVolume);
+        purgeCell.textContent = formatVolume(purgeVolume);
+      };
+
+      row.appendChild(dnCell);
+      row.appendChild(lengthCell);
+      row.appendChild(installCell);
+      row.appendChild(purgeCell);
+      row.appendChild(actionsCell);
+
+      pipeRowsBody.appendChild(row);
+      rowElements.push({ updateVolumes: updateRowVolumes });
+      updateRowVolumes();
     });
-    dispatchDataUpdated();
   };
 
-  const serialiseFormData = () => {
-    const data = {};
-    inputs.forEach((input) => {
-      if (!input.id) return;
-      if (input.type === 'checkbox') {
-        data[input.id] = input.checked;
-      } else {
-        data[input.id] = input.value;
-      }
-    });
-    return data;
-  };
+  const updateSummary = () => {
+    const multiplierValid = isMultiplierValid();
+    const multiplier = getPurgeMultiplier();
+    const meterSelection = meterSelect.value;
+    const hasMeter = Boolean(
+      meterSelection &&
+        meterSelection.toLowerCase() !== 'no meter' &&
+        Object.prototype.hasOwnProperty.call(METER_MAP, meterSelection)
+    );
+    const meterKey = hasMeter ? meterSelection : null;
+    const hoseSelection = hoseSelect.value;
+    const hasHose = Boolean(hoseSelection && Number.isFinite(HOSE_MAP[hoseSelection]));
+    const hoseKey = hasHose ? hoseSelection : null;
+    purgeMultiplierInput.setAttribute(
+      'aria-invalid',
+      !multiplierValid && purgeMultiplierInput.value !== '' ? 'true' : 'false'
+    );
 
-  const loadState = () => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (!saved) return;
-      const parsed = JSON.parse(saved);
-      if (parsed && typeof parsed === 'object') {
-        applyInputData(parsed);
-      }
+      const pipesForTotals = getSegmentsForTotals();
+      const totals = computeTotals({
+        pipes: pipesForTotals,
+        meterName: meterKey,
+        purgeHoseSize: hoseKey,
+        purgeMultiplier: multiplier
+      });
+      const breakdown = totals.breakdown;
+
+      updateAllRowVolumes(multiplier);
+
+      const multiplierSentence = multiplierValid
+        ? `Pipe purge uses ${formatNumber(multiplier, 2)} × the installed pipe volume as per IGEM/UP/1 Sheet 1.`
+        : `Default ${formatNumber(DEFAULT_PURGE_MULTIPLIER, 2)} × pipe purge factor applied because the override is empty or invalid.`;
+      const meterSentence = hasMeter
+        ? `Meter ${meterSelection.toUpperCase()} contributes ${formatVolume(breakdown.meterInstall_m3)} m³ (install) and ${formatVolume(
+            breakdown.meterPurge_m3
+          )} m³ (purge) using Table 3 values.`
+        : 'No meter selected, so only pipework volumes are included.';
+      const hoseSentence = hasHose
+        ? `${hoseSelection} purge hose allowance adds ${formatVolume(breakdown.purgeHose_m3)} m³ from Table 4.`
+        : 'No purge hose allowance applied.';
+
+      summary.innerHTML = `
+        <p><strong>Total installation volume:</strong> ${formatVolume(totals.installVolume_m3)} m³ (pipes ${formatVolume(
+          breakdown.pipeInstall_m3
+        )} m³ + meter ${formatVolume(breakdown.meterInstall_m3)} m³).</p>
+        <p><strong>Total purge volume:</strong> ${formatVolume(totals.purgeVolume_m3)} m³ (pipes ${formatVolume(
+          breakdown.pipePurge_m3
+        )} m³ + meter ${formatVolume(breakdown.meterPurge_m3)} m³ + hose ${formatVolume(breakdown.purgeHose_m3)} m³).</p>
+        <p>${multiplierSentence}</p>
+        <p>${meterSentence} ${hoseSentence}</p>
+      `;
+
+      const breakdownRows = [
+        ['Pipe installation (Table 4)', formatVolume(breakdown.pipeInstall_m3)],
+        ['Pipe purge (factor × install)', formatVolume(breakdown.pipePurge_m3)],
+        ['Meter installation (Table 3)', formatVolume(breakdown.meterInstall_m3)],
+        ['Meter purge (Table 3)', formatVolume(breakdown.meterPurge_m3)],
+        ['Purge hose allowance', formatVolume(breakdown.purgeHose_m3)],
+        ['Total installation', formatVolume(totals.installVolume_m3)],
+        ['Total purge', formatVolume(totals.purgeVolume_m3)]
+      ];
+      totalsBody.innerHTML = breakdownRows
+        .map((row) => `<tr><td>${row[0]}</td><td class="numeric">${row[1]}</td></tr>`)
+        .join('');
+
+      segmentBody.innerHTML = pipesForTotals
+        .map((segment) => {
+          let install = Number.NaN;
+          let purge = Number.NaN;
+          try {
+            install = pipeInstallVolume(segment.dn, segment.length_m);
+            purge = pipePurgeVolume(segment.dn, segment.length_m, multiplier);
+          } catch (error) {
+            console.error('Segment breakdown calculation failed', error);
+          }
+          return `
+            <tr>
+              <td>${segment.dn}</td>
+              <td class="numeric">${formatNumber(segment.length_m, 2)}</td>
+              <td class="numeric">${formatVolume(install)}</td>
+              <td class="numeric">${formatVolume(purge)}</td>
+            </tr>
+          `;
+        })
+        .join('');
     } catch (error) {
-      console.error('Could not load saved state', error);
+      summary.innerHTML = `<p>Unable to calculate volumes: ${error instanceof Error ? error.message : 'Unknown error'}.</p>`;
+      totalsBody.innerHTML = '';
+      segmentBody.innerHTML = '';
+      console.error('Volume calculation failed', error);
     }
   };
 
-  const saveState = () => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(serialiseFormData()));
-    } catch (error) {
-      console.error('Could not persist state', error);
-    }
-  };
-
-  const readNumber = (input) => {
-    if (!input) return Number.NaN;
-    const value = parseFloat(input.value);
-    return Number.isFinite(value) ? value : Number.NaN;
-  };
-
-  const formatNumber = (value, decimals = 2) => {
-    if (!Number.isFinite(value)) return '—';
-    return Number(value).toFixed(decimals);
-  };
-
-  const calculateTestPlan = () => {
-    const summary = document.getElementById('test-calculation-summary');
-    const details = document.getElementById('test-calculation-details-body');
-    if (!summary || !details) return;
-
-    const designInput = document.getElementById('design-pressure');
-    const operatingInput = document.getElementById('operating-pressure');
-    const volumeInput = document.getElementById('volume');
-    const fillRateInput = document.getElementById('test-fill-rate');
-    const startTempInput = document.getElementById('test-temp-start');
-    const endTempInput = document.getElementById('test-temp-end');
-    const gasTypeInput = document.getElementById('gas-type');
-
-    let designPressure = readNumber(designInput);
-    const operatingPressure = readNumber(operatingInput);
-    if (!Number.isFinite(designPressure)) {
-      designPressure = operatingPressure;
-    }
-
-    const systemVolume = readNumber(volumeInput);
-    const fillRate = readNumber(fillRateInput);
-    const startTemp = readNumber(startTempInput);
-    const endTemp = readNumber(endTempInput);
-    const gasType = gasTypeInput ? gasTypeInput.options[gasTypeInput.selectedIndex].text : 'Unknown';
-
-    if (!Number.isFinite(designPressure) || !Number.isFinite(systemVolume)) {
-      summary.innerHTML =
-        '<p>Please provide the design or operating pressure and the estimated system volume to generate recommendations.</p>';
-      details.innerHTML =
-        '<p>Set the operating pressure in the Pipework Overview and enter an estimated system volume. Optional fields help refine the stabilisation and temperature allowances.</p>';
+  const restoreFromHidden = () => {
+    if (!hiddenField) return;
+    if (!hiddenField.value) {
+      pipeSegments = [];
+      ensureAtLeastOneSegment();
+      renderRows();
+      persistSegments(false);
+      updateSummary();
       return;
     }
-
-    const pressureThreshold = 75;
-    const lowPressure = designPressure <= pressureThreshold;
-    const algorithmLogic = lowPressure
-      ? `Low-pressure algorithm applied because design pressure (${formatNumber(designPressure, 1)} mbar) is ≤ ${pressureThreshold} mbar.`
-      : `Medium/high-pressure algorithm applied because design pressure (${formatNumber(designPressure, 1)} mbar) exceeds ${pressureThreshold} mbar.`;
-
-    const strengthTestPressure = lowPressure ? Math.max(designPressure * 1.5, 150) : Math.max(designPressure * 1.5, 1000);
-
-    let tightnessTestPressure = lowPressure ? Math.max(designPressure, 20) : Math.max(designPressure * 1.1, 300);
-    tightnessTestPressure = Math.min(tightnessTestPressure, strengthTestPressure * 0.9);
-
-    let holdTimeMinutes;
-    if (systemVolume <= 0.03) {
-      holdTimeMinutes = 5;
-    } else if (systemVolume <= 0.1) {
-      holdTimeMinutes = 10;
-    } else {
-      holdTimeMinutes = 20 + (systemVolume - 0.1) * 30;
-    }
-    holdTimeMinutes = Math.max(5, Math.min(holdTimeMinutes, 180));
-
-    let stabilisationMinutes = Number.NaN;
-    if (Number.isFinite(systemVolume) && Number.isFinite(fillRate) && fillRate > 0) {
-      stabilisationMinutes = Math.max(10, (systemVolume / fillRate) * 60 + 5);
-    }
-
-    let temperatureCompensation = Number.NaN;
-    let temperatureNarrative = '';
-    if (Number.isFinite(startTemp) && Number.isFinite(endTemp)) {
-      const deltaTemp = endTemp - startTemp;
-      const absoluteStart = startTemp + 273.15;
-      if (absoluteStart > 0) {
-        temperatureCompensation = tightnessTestPressure * (deltaTemp / absoluteStart);
-        temperatureNarrative =
-          deltaTemp === 0
-            ? 'No ambient temperature change detected during the test window.'
-            : `Temperature ${deltaTemp > 0 ? 'increase' : 'decrease'} of ${formatNumber(Math.abs(deltaTemp), 1)} °C would cause an apparent pressure ${
-                deltaTemp > 0 ? 'rise' : 'fall'
-              } of approximately ${formatNumber(Math.abs(temperatureCompensation), 2)} mbar.`;
+    try {
+      const parsed = JSON.parse(hiddenField.value);
+      if (Array.isArray(parsed)) {
+        pipeSegments = parsed
+          .map((entry) => ({
+            dn: pipeOptions.includes(entry.dn) ? entry.dn : pipeOptions[0],
+            length_m:
+              entry.length_m === null || entry.length_m === undefined
+                ? ''
+                : String(entry.length_m)
+          }))
+          .filter((segment) => segment.dn);
+      } else {
+        pipeSegments = [];
       }
+    } catch (error) {
+      console.error('Could not parse stored pipe configuration', error);
+      pipeSegments = [];
     }
-
-    summary.innerHTML = `
-      <p><strong>Algorithm used:</strong> ${algorithmLogic}</p>
-      <p><strong>Recommended strength test pressure:</strong> ${formatNumber(strengthTestPressure, 1)} mbar.</p>
-      <p><strong>Recommended tightness test pressure:</strong> ${formatNumber(tightnessTestPressure, 1)} mbar.</p>
-      <p><strong>Minimum hold time:</strong> ${formatNumber(holdTimeMinutes, 1)} minutes based on system volume.</p>
-      ${Number.isFinite(stabilisationMinutes) ? `<p><strong>Suggested stabilisation time:</strong> ${formatNumber(stabilisationMinutes, 1)} minutes, derived from fill rate.</p>` : ''}
-      ${temperatureNarrative ? `<p><strong>Temperature effect:</strong> ${temperatureNarrative}</p>` : ''}
-      <p><strong>Gas type context:</strong> ${gasType}.</p>
-    `;
-
-    const detailedRows = [
-      ['Design pressure (mbar)', formatNumber(designPressure, 2)],
-      ['Operating pressure (mbar)', Number.isFinite(operatingPressure) ? formatNumber(operatingPressure, 2) : 'Not provided'],
-      ['System volume (m³)', formatNumber(systemVolume, 3)],
-      ['Expected fill rate (m³/h)', Number.isFinite(fillRate) ? formatNumber(fillRate, 2) : 'Not provided'],
-      ['Start temperature (°C)', Number.isFinite(startTemp) ? formatNumber(startTemp, 1) : 'Not provided'],
-      ['End temperature (°C)', Number.isFinite(endTemp) ? formatNumber(endTemp, 1) : 'Not provided'],
-    ];
-
-    const calculationSteps = `
-      <ol>
-        <li>Determine pressure category by comparing design pressure with ${pressureThreshold} mbar.</li>
-        <li>Strength test pressure = max(1.5 × design pressure, ${lowPressure ? '150' : '1000'} mbar).</li>
-        <li>Tightness test pressure limited to 90% of strength recommendation and at least ${
-          lowPressure ? 'the design pressure or 20 mbar' : '10% above design pressure and ≥300 mbar'
-        }.</li>
-        <li>Hold time set from volume bands: ≤0.03 m³ → 5 min, 0.03–0.1 m³ → 10 min, additional 30 min per extra m³ beyond 0.1 m³.</li>
-        <li>${
-          Number.isFinite(stabilisationMinutes)
-            ? 'Stabilisation time = ((volume ÷ fill rate) × 60) + 5 minutes, minimum 10 minutes.'
-            : 'Provide a fill rate to calculate the stabilisation time.'
-        }</li>
-        <li>${
-          Number.isFinite(temperatureCompensation)
-            ? 'Temperature compensation uses ΔP = P × ΔT ÷ (T₁ + 273.15).'
-            : 'Enter start and end temperatures to estimate apparent pressure change from temperature variation.'
-        }</li>
-      </ol>
-    `;
-
-    const resultList = `
-      <ul>
-        <li>Strength test pressure: ${formatNumber(strengthTestPressure, 1)} mbar.</li>
-        <li>Tightness test pressure: ${formatNumber(tightnessTestPressure, 1)} mbar.</li>
-        <li>Minimum hold time: ${formatNumber(holdTimeMinutes, 1)} minutes.</li>
-        ${Number.isFinite(stabilisationMinutes) ? `<li>Suggested stabilisation time: ${formatNumber(stabilisationMinutes, 1)} minutes.</li>` : ''}
-        ${Number.isFinite(temperatureCompensation) ? `<li>Temperature-induced apparent pressure change: ±${formatNumber(Math.abs(temperatureCompensation), 2)} mbar.</li>` : ''}
-      </ul>
-    `;
-
-    details.innerHTML = `
-      <h4>Initial data</h4>
-      <table>
-        <thead>
-          <tr><th>Variable</th><th>Value</th></tr>
-        </thead>
-        <tbody>
-          ${detailedRows.map((row) => `<tr><td>${row[0]}</td><td>${row[1]}</td></tr>`).join('')}
-        </tbody>
-      </table>
-      <h4>Calculations</h4>
-      ${calculationSteps}
-      <h4>Results</h4>
-      ${resultList}
-    `;
+    ensureAtLeastOneSegment();
+    renderRows();
+    updateSummary();
   };
 
-  const exportProcedure = () => {
-    const blob = new Blob([JSON.stringify(serialiseFormData(), null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'igem-up1-procedure.json';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
-  const handleImportData = (objectData) => {
-    if (!objectData || typeof objectData !== 'object') {
-      throw new Error('The provided JSON does not contain form data.');
-    }
-    applyInputData(objectData);
-    saveState();
-    calculateTestPlan();
-  };
-
-  const importInput = document.getElementById('import-file');
-  if (importInput) {
-    importInput.addEventListener('change', (event) => {
-      const file = event.target.files && event.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const parsed = JSON.parse(String(e.target?.result || ''));
-          handleImportData(parsed);
-        } catch (error) {
-          alert(`Unable to load procedure: ${error instanceof Error ? error.message : 'Unknown error'}`);
-          console.error('Import failed', error);
-        } finally {
-          importInput.value = '';
-        }
-      };
-      reader.readAsText(file);
-    });
-  }
-
-  inputs.forEach((input) => {
-    const eventName = input.type === 'checkbox' ? 'change' : 'input';
-    input.addEventListener(eventName, saveState);
-    if (eventName === 'change') {
-      input.addEventListener('input', saveState);
-    }
+  addPipeButton.addEventListener('click', () => {
+    pipeSegments.push({ dn: pipeOptions[0], length_m: '' });
+    renderRows();
+    persistSegments();
+    updateSummary();
   });
 
-  const calculateButton = document.getElementById('calculate-test-plan');
-  if (calculateButton) {
-    calculateButton.addEventListener('click', () => {
-      calculateTestPlan();
-      saveState();
-    });
+  meterSelect.addEventListener('change', () => {
+    updateSummary();
+  });
+
+  hoseSelect.addEventListener('change', () => {
+    updateSummary();
+  });
+
+  purgeMultiplierInput.addEventListener('input', () => {
+    updateSummary();
+  });
+
+  document.addEventListener('procedure-data-updated', restoreFromHidden);
+  restoreFromHidden();
+}
+
+function calculateTestPlan() {
+  const summary = document.getElementById('test-calculation-summary');
+  const details = document.getElementById('test-calculation-details-body');
+  if (!summary || !details) return;
+
+  const designInput = document.getElementById('design-pressure');
+  const operatingInput = document.getElementById('operating-pressure');
+  const volumeInput = document.getElementById('volume');
+  const fillRateInput = document.getElementById('test-fill-rate');
+  const startTempInput = document.getElementById('test-temp-start');
+  const endTempInput = document.getElementById('test-temp-end');
+  const gasTypeInput = document.getElementById('gas-type');
+
+  let designPressure = readNumber(designInput);
+  const operatingPressure = readNumber(operatingInput);
+  if (!Number.isFinite(designPressure)) {
+    designPressure = operatingPressure;
   }
 
-  const designPressureInput = document.getElementById('design-pressure');
-  const operatingPressureInput = document.getElementById('operating-pressure');
-  if (designPressureInput && operatingPressureInput) {
-    const syncDesignPlaceholder = () => {
-      if (!designPressureInput.value) {
-        const op = parseFloat(operatingPressureInput.value);
-        designPressureInput.placeholder = Number.isFinite(op)
-          ? `Using operating pressure (${op.toFixed(1)} mbar)`
-          : 'Automatically use operating pressure if blank';
-      } else {
-        designPressureInput.placeholder = 'Design pressure overrides operating pressure';
+  const systemVolume = readNumber(volumeInput);
+  const fillRate = readNumber(fillRateInput);
+  const startTemp = readNumber(startTempInput);
+  const endTemp = readNumber(endTempInput);
+  const gasType = gasTypeInput ? gasTypeInput.options[gasTypeInput.selectedIndex]?.text ?? 'Unknown' : 'Unknown';
+
+  if (!Number.isFinite(designPressure) || !Number.isFinite(systemVolume)) {
+    summary.innerHTML =
+      '<p>Please provide the design or operating pressure and the estimated system volume to generate recommendations.</p>';
+    details.innerHTML =
+      '<p>Set the operating pressure in the Pipework Overview and enter an estimated system volume. Optional fields help refine the stabilisation and temperature allowances.</p>';
+    return;
+  }
+
+  const pressureThreshold = 75;
+  const lowPressure = designPressure <= pressureThreshold;
+  const algorithmLogic = lowPressure
+    ? `Low-pressure algorithm applied because design pressure (${formatNumber(designPressure, 1)} mbar) is ≤ ${pressureThreshold} mbar.`
+    : `Medium/high-pressure algorithm applied because design pressure (${formatNumber(designPressure, 1)} mbar) exceeds ${pressureThreshold} mbar.`;
+
+  const strengthTestPressure = lowPressure ? Math.max(designPressure * 1.5, 150) : Math.max(designPressure * 1.5, 1000);
+
+  let tightnessTestPressure = lowPressure ? Math.max(designPressure, 20) : Math.max(designPressure * 1.1, 300);
+  tightnessTestPressure = Math.min(tightnessTestPressure, strengthTestPressure * 0.9);
+
+  let holdTimeMinutes;
+  if (systemVolume <= 0.03) {
+    holdTimeMinutes = 5;
+  } else if (systemVolume <= 0.1) {
+    holdTimeMinutes = 10;
+  } else {
+    holdTimeMinutes = 20 + (systemVolume - 0.1) * 30;
+  }
+  holdTimeMinutes = Math.max(5, Math.min(holdTimeMinutes, 180));
+
+  let stabilisationMinutes = Number.NaN;
+  if (Number.isFinite(systemVolume) && Number.isFinite(fillRate) && fillRate > 0) {
+    stabilisationMinutes = Math.max(10, (systemVolume / fillRate) * 60 + 5);
+  }
+
+  let temperatureCompensation = Number.NaN;
+  let temperatureNarrative = '';
+  if (Number.isFinite(startTemp) && Number.isFinite(endTemp)) {
+    const deltaTemp = endTemp - startTemp;
+    const absoluteStart = startTemp + 273.15;
+    if (absoluteStart > 0) {
+      temperatureCompensation = tightnessTestPressure * (deltaTemp / absoluteStart);
+      temperatureNarrative =
+        deltaTemp === 0
+          ? 'No ambient temperature change detected during the test window.'
+          : `Temperature ${deltaTemp > 0 ? 'increase' : 'decrease'} of ${formatNumber(Math.abs(deltaTemp), 1)} °C would cause an apparent pressure ${
+              deltaTemp > 0 ? 'rise' : 'fall'
+            } of approximately ${formatNumber(Math.abs(temperatureCompensation), 2)} mbar.`;
+    }
+  }
+
+  summary.innerHTML = `
+    <p><strong>Algorithm used:</strong> ${algorithmLogic}</p>
+    <p><strong>Recommended strength test pressure:</strong> ${formatNumber(strengthTestPressure, 1)} mbar.</p>
+    <p><strong>Recommended tightness test pressure:</strong> ${formatNumber(tightnessTestPressure, 1)} mbar.</p>
+    <p><strong>Minimum hold time:</strong> ${formatNumber(holdTimeMinutes, 1)} minutes based on system volume.</p>
+    ${
+      Number.isFinite(stabilisationMinutes)
+        ? `<p><strong>Suggested stabilisation time:</strong> ${formatNumber(stabilisationMinutes, 1)} minutes, derived from fill rate.</p>`
+        : ''
+    }
+    ${temperatureNarrative ? `<p><strong>Temperature effect:</strong> ${temperatureNarrative}</p>` : ''}
+    <p><strong>Gas type context:</strong> ${gasType}.</p>
+  `;
+
+  const detailedRows = [
+    ['Design pressure (mbar)', formatNumber(designPressure, 2)],
+    ['Operating pressure (mbar)', Number.isFinite(operatingPressure) ? formatNumber(operatingPressure, 2) : 'Not provided'],
+    ['System volume (m³)', formatNumber(systemVolume, 3)],
+    ['Expected fill rate (m³/h)', Number.isFinite(fillRate) ? formatNumber(fillRate, 2) : 'Not provided'],
+    ['Start temperature (°C)', Number.isFinite(startTemp) ? formatNumber(startTemp, 1) : 'Not provided'],
+    ['End temperature (°C)', Number.isFinite(endTemp) ? formatNumber(endTemp, 1) : 'Not provided']
+  ];
+
+  const calculationSteps = `
+    <ol>
+      <li>Determine pressure category by comparing design pressure with ${pressureThreshold} mbar.</li>
+      <li>Strength test pressure = max(1.5 × design pressure, ${lowPressure ? '150' : '1000'} mbar).</li>
+      <li>Tightness test pressure limited to 90% of strength recommendation and at least ${
+        lowPressure ? 'the design pressure or 20 mbar' : '10% above design pressure and ≥300 mbar'
+      }.</li>
+      <li>Hold time set from volume bands: ≤0.03 m³ → 5 min, 0.03–0.1 m³ → 10 min, additional 30 min per extra m³ beyond 0.1 m³.</li>
+      <li>${
+        Number.isFinite(stabilisationMinutes)
+          ? 'Stabilisation time = ((volume ÷ fill rate) × 60) + 5 minutes, minimum 10 minutes.'
+          : 'Provide a fill rate to calculate the stabilisation time.'
+      }</li>
+      <li>${
+        Number.isFinite(temperatureCompensation)
+          ? 'Temperature compensation uses ΔP = P × ΔT ÷ (T₁ + 273.15).'
+          : 'Enter start and end temperatures to estimate apparent pressure change from temperature variation.'
+      }</li>
+    </ol>
+  `;
+
+  const resultList = `
+    <ul>
+      <li>Strength test pressure: ${formatNumber(strengthTestPressure, 1)} mbar.</li>
+      <li>Tightness test pressure: ${formatNumber(tightnessTestPressure, 1)} mbar.</li>
+      <li>Minimum hold time: ${formatNumber(holdTimeMinutes, 1)} minutes.</li>
+      ${
+        Number.isFinite(stabilisationMinutes)
+          ? `<li>Suggested stabilisation time: ${formatNumber(stabilisationMinutes, 1)} minutes.</li>`
+          : ''
+      }
+      ${
+        Number.isFinite(temperatureCompensation)
+          ? `<li>Temperature-induced apparent pressure change: ±${formatNumber(Math.abs(temperatureCompensation), 2)} mbar.</li>`
+          : ''
+      }
+    </ul>
+  `;
+
+  details.innerHTML = `
+    <h4>Initial data</h4>
+    <table>
+      <thead>
+        <tr><th>Variable</th><th>Value</th></tr>
+      </thead>
+      <tbody>
+        ${detailedRows.map((row) => `<tr><td>${row[0]}</td><td>${row[1]}</td></tr>`).join('')}
+      </tbody>
+    </table>
+    <h4>Calculations</h4>
+    ${calculationSteps}
+    <h4>Results</h4>
+    ${resultList}
+  `;
+}
+
+const exportProcedure = () => {
+  const blob = new Blob([JSON.stringify(serialiseFormData(), null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'igem-up1-procedure.json';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
+const handleImportData = (objectData) => {
+  if (!objectData || typeof objectData !== 'object') {
+    throw new Error('The provided JSON does not contain form data.');
+  }
+  applyInputData(objectData);
+  saveState();
+  calculateTestPlan();
+};
+
+const importInput = document.getElementById('import-file');
+if (importInput) {
+  importInput.addEventListener('change', (event) => {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const parsed = JSON.parse(String(e.target?.result || ''));
+        handleImportData(parsed);
+      } catch (error) {
+        alert(`Unable to load procedure: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        console.error('Import failed', error);
+      } finally {
+        importInput.value = '';
       }
     };
-    operatingPressureInput.addEventListener('input', () => {
-      syncDesignPlaceholder();
-      saveState();
-    });
-    designPressureInput.addEventListener('input', syncDesignPlaceholder);
+    reader.readAsText(file);
+  });
+}
+
+inputs.forEach((input) => {
+  if (!input) return;
+  const primaryEvent = input.type === 'checkbox' || input.tagName === 'SELECT' ? 'change' : 'input';
+  input.addEventListener(primaryEvent, saveState);
+  if (primaryEvent === 'change') {
+    input.addEventListener('input', saveState);
+  }
+});
+
+const calculateButton = document.getElementById('calculate-test-plan');
+if (calculateButton) {
+  calculateButton.addEventListener('click', () => {
+    calculateTestPlan();
+    saveState();
+  });
+}
+
+const designPressureInput = document.getElementById('design-pressure');
+const operatingPressureInput = document.getElementById('operating-pressure');
+if (designPressureInput && operatingPressureInput) {
+  const syncDesignPlaceholder = () => {
+    if (!designPressureInput.value) {
+      const op = parseFloat(operatingPressureInput.value);
+      designPressureInput.placeholder = Number.isFinite(op)
+        ? `Using operating pressure (${op.toFixed(1)} mbar)`
+        : 'Automatically use operating pressure if blank';
+    } else {
+      designPressureInput.placeholder = 'Design pressure overrides operating pressure';
+    }
+  };
+  operatingPressureInput.addEventListener('input', () => {
     syncDesignPlaceholder();
-  }
+    saveState();
+  });
+  designPressureInput.addEventListener('input', syncDesignPlaceholder);
+  syncDesignPlaceholder();
+}
 
-  const popover = document.createElement('div');
-  popover.className = 'popover-bubble hidden';
-  popover.setAttribute('role', 'status');
-  popover.setAttribute('aria-live', 'polite');
+const popover = document.createElement('div');
+popover.className = 'popover-bubble hidden';
+popover.setAttribute('role', 'status');
+popover.setAttribute('aria-live', 'polite');
+popover.setAttribute('aria-hidden', 'true');
+document.body.appendChild(popover);
+
+let activePopoverTrigger = null;
+
+const positionPopover = (target) => {
+  if (!target) return;
+  popover.classList.remove('hidden');
+  popover.textContent = target.getAttribute('data-popover') || '';
+  popover.setAttribute('aria-hidden', 'false');
+  popover.style.top = '0px';
+  popover.style.left = '0px';
+  const popRect = popover.getBoundingClientRect();
+  const { width, height } = popRect;
+  const rect = target.getBoundingClientRect();
+  const padding = 12;
+  const left = Math.min(window.innerWidth - width - padding, Math.max(padding, rect.left + rect.width / 2 - width / 2));
+  const top = Math.min(window.innerHeight - height - padding, Math.max(padding, rect.bottom + 10));
+  popover.style.left = `${left}px`;
+  popover.style.top = `${top}px`;
+};
+
+const hidePopover = () => {
+  popover.classList.add('hidden');
+  popover.textContent = '';
   popover.setAttribute('aria-hidden', 'true');
-  document.body.appendChild(popover);
+  activePopoverTrigger = null;
+};
 
-  let activePopoverTrigger = null;
+const showPopover = (target) => {
+  if (!target) return;
+  activePopoverTrigger = target;
+  positionPopover(target);
+};
 
-  const positionPopover = (target) => {
-    if (!target) return;
-    popover.classList.remove('hidden');
-    popover.textContent = target.getAttribute('data-popover') || '';
-    popover.setAttribute('aria-hidden', 'false');
-    popover.style.top = '0px';
-    popover.style.left = '0px';
-    const popRect = popover.getBoundingClientRect();
-    const { width, height } = popRect;
-    const rect = target.getBoundingClientRect();
-    const padding = 12;
-    const left = Math.min(window.innerWidth - width - padding, Math.max(padding, rect.left + rect.width / 2 - width / 2));
-    const top = Math.min(window.innerHeight - height - padding, Math.max(padding, rect.bottom + 10));
-    popover.style.left = `${left}px`;
-    popover.style.top = `${top}px`;
-  };
-
-  const hidePopover = () => {
-    popover.classList.add('hidden');
-    popover.textContent = '';
-    popover.setAttribute('aria-hidden', 'true');
-    activePopoverTrigger = null;
-  };
-
-  const showPopover = (target) => {
-    if (!target) return;
-    activePopoverTrigger = target;
-    positionPopover(target);
-  };
-
-  document.querySelectorAll('.info-icon').forEach((icon) => {
-    icon.addEventListener('mouseenter', () => showPopover(icon));
-    icon.addEventListener('mouseleave', () => {
-      if (document.activeElement !== icon) {
-        hidePopover();
-      }
-    });
-    icon.addEventListener('focus', () => showPopover(icon));
-    icon.addEventListener('blur', hidePopover);
-    icon.addEventListener('click', (event) => {
-      event.preventDefault();
-      if (activePopoverTrigger === icon && !popover.classList.contains('hidden')) {
-        hidePopover();
-      } else {
-        showPopover(icon);
-      }
-    });
-    icon.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape') {
-        hidePopover();
-        icon.blur();
-      }
-    });
-  });
-
-  window.addEventListener('scroll', () => {
-    if (activePopoverTrigger) {
-      positionPopover(activePopoverTrigger);
+document.querySelectorAll('.info-icon').forEach((icon) => {
+  icon.addEventListener('mouseenter', () => showPopover(icon));
+  icon.addEventListener('mouseleave', () => {
+    if (document.activeElement !== icon) {
+      hidePopover();
     }
   });
-
-  window.addEventListener('resize', () => {
-    if (activePopoverTrigger) {
-      positionPopover(activePopoverTrigger);
+  icon.addEventListener('focus', () => showPopover(icon));
+  icon.addEventListener('blur', hidePopover);
+  icon.addEventListener('click', (event) => {
+    event.preventDefault();
+    if (activePopoverTrigger === icon && !popover.classList.contains('hidden')) {
+      hidePopover();
+    } else {
+      showPopover(icon);
     }
   });
-
-  document.addEventListener('procedure-data-updated', () => {
-    if (designPressureInput && operatingPressureInput) {
-      const event = new Event('input');
-      operatingPressureInput.dispatchEvent(event);
-      designPressureInput.dispatchEvent(event);
+  icon.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      hidePopover();
+      icon.blur();
     }
   });
+});
 
-  const yearPlaceholder = document.getElementById('year');
-  if (yearPlaceholder) {
-    yearPlaceholder.textContent = new Date().getFullYear();
+window.addEventListener('scroll', () => {
+  if (activePopoverTrigger) {
+    positionPopover(activePopoverTrigger);
   }
+});
 
-  const printButton = document.getElementById('print-procedure');
-  if (printButton) {
-    printButton.addEventListener('click', () => window.print());
+window.addEventListener('resize', () => {
+  if (activePopoverTrigger) {
+    positionPopover(activePopoverTrigger);
   }
+});
 
-  const exportButton = document.getElementById('export-procedure');
-  if (exportButton) {
-    exportButton.addEventListener('click', exportProcedure);
+document.addEventListener('procedure-data-updated', () => {
+  if (designPressureInput && operatingPressureInput) {
+    const event = new Event('input');
+    operatingPressureInput.dispatchEvent(event);
+    designPressureInput.dispatchEvent(event);
   }
+});
 
-  const importButton = document.getElementById('import-procedure');
-  if (importButton && importInput) {
-    importButton.addEventListener('click', () => importInput.click());
-  }
+const yearPlaceholder = document.getElementById('year');
+if (yearPlaceholder) {
+  yearPlaceholder.textContent = new Date().getFullYear();
+}
 
-  const queryMode = new URLSearchParams(window.location.search).get('mode');
-  if (queryMode === 'new') {
-    localStorage.removeItem(STORAGE_KEY);
-    applyInputData({});
-    history.replaceState(null, '', window.location.pathname);
-  } else if (queryMode === 'load' && importInput) {
-    history.replaceState(null, '', window.location.pathname);
-    setTimeout(() => importInput.click(), 150);
-  }
+const printButton = document.getElementById('print-procedure');
+if (printButton) {
+  printButton.addEventListener('click', () => window.print());
+}
 
-  loadState();
-  calculateTestPlan();
-  registerServiceWorker();
-})();
+const exportButton = document.getElementById('export-procedure');
+if (exportButton) {
+  exportButton.addEventListener('click', exportProcedure);
+}
+
+const importButton = document.getElementById('import-procedure');
+if (importButton && importInput) {
+  importButton.addEventListener('click', () => importInput.click());
+}
+
+const queryMode = new URLSearchParams(window.location.search).get('mode');
+if (queryMode === 'new') {
+  localStorage.removeItem(STORAGE_KEY);
+  applyInputData({});
+  history.replaceState(null, '', window.location.pathname);
+} else if (queryMode === 'load' && importInput) {
+  history.replaceState(null, '', window.location.pathname);
+  setTimeout(() => importInput.click(), 150);
+}
+
+initialisePipeCalculator();
+loadState();
+calculateTestPlan();
+registerServiceWorker();

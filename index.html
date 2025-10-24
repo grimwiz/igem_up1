@@ -97,6 +97,86 @@
           <input id="volume" type="number" min="0" step="0.01" />
         </div>
       </div>
+      <div class="calculation-block" id="pipe-volume-calculator">
+        <h3>Pipe, meter and purge volume estimator</h3>
+        <p>
+          Build the IGEM/UP/1 Table 3 and Table 4 volumes directly in the browser. Add every pipe segment that forms part of the
+          test, select the installed meter, and include any purge hose to replicate the worksheet logic. Pipe purge volumes use
+          the same multiplier defined in IGEM/UP/1 Sheet 1.
+        </p>
+        <div class="pipe-table-wrapper">
+          <table class="pipe-table">
+            <thead>
+              <tr>
+                <th scope="col">Pipe size (DN)</th>
+                <th scope="col">Length (m)</th>
+                <th scope="col">Installation volume (m³)</th>
+                <th scope="col">Purge volume (m³)</th>
+                <th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="pipe-rows"></tbody>
+          </table>
+          <button type="button" id="add-pipe-row" class="secondary-button">Add pipe segment</button>
+        </div>
+        <div class="pipe-inputs">
+          <div>
+            <label for="meter-select">Meter (Table 3)</label>
+            <select id="meter-select"></select>
+          </div>
+          <div>
+            <label for="purge-hose-size">Purge hose size (Table 4)</label>
+            <select id="purge-hose-size"></select>
+          </div>
+          <div>
+            <label for="purge-multiplier">
+              Pipe purge multiplier
+              <span
+                class="info-icon"
+                tabindex="0"
+                role="button"
+                aria-label="Explanation for purge multiplier"
+                data-popover="Default IGEM/UP/1 logic uses a purge allowance of 1.5 × the installed pipe volume. Adjust only if the standard or project specification requires a different factor."
+              ></span>
+            </label>
+            <input id="purge-multiplier" type="number" min="0" step="0.1" />
+          </div>
+        </div>
+        <div class="calculation-results" id="pipe-volume-summary" role="status" aria-live="polite">
+          Add at least one pipe segment to calculate installation and purge volumes.
+        </div>
+        <details id="pipe-volume-details">
+          <summary>Breakdown</summary>
+          <div class="calculation-details">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Component</th>
+                  <th scope="col" class="numeric">Volume (m³)</th>
+                </tr>
+              </thead>
+              <tbody id="pipe-volume-breakdown-body"></tbody>
+            </table>
+            <h4>Pipe segments</h4>
+            <table class="pipe-table pipe-breakdown-table">
+              <thead>
+                <tr>
+                  <th scope="col">Pipe size</th>
+                  <th scope="col">Length (m)</th>
+                  <th scope="col">Install (m³)</th>
+                  <th scope="col">Purge (m³)</th>
+                </tr>
+              </thead>
+              <tbody id="pipe-segment-breakdown-body"></tbody>
+            </table>
+            <p>
+              Cross-check these totals with the latest IGEM/UP/1 publication on the IGEM technical services site and guidance in
+              Section 8 to confirm that the chosen approach still reflects the published standard before issuing the procedure.
+            </p>
+          </div>
+        </details>
+        <input type="hidden" id="pipe-configuration" />
+      </div>
     </section>
 
     <section id="testing-plan">
@@ -307,7 +387,7 @@
     © <span id="year"></span> Testing &amp; Purging Procedure Template · Aligns with IGEM/UP/1 good practice.
   </footer>
 
-  <script src="app.js" defer></script>
+  <script type="module" src="app.js"></script>
 
 </body>
 </html>
