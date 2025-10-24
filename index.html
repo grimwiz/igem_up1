@@ -101,8 +101,8 @@
         <h3>Pipe, meter and purge volume estimator</h3>
         <p>
           Build the IGEM/UP/1 Table 3 and Table 4 volumes directly in the browser. Add every pipe segment that forms part of the
-          test, select the installed meter, and include any purge hose to replicate the worksheet logic. Pipe purge volumes use
-          the same multiplier defined in IGEM/UP/1 Sheet 1.
+          test, select the installed diaphragm or rotary meters, and include any purge hose to replicate the worksheet logic.
+          Pipe purge volumes use the same multiplier defined in IGEM/UP/1 Sheet 1.
         </p>
         <div class="pipe-table-wrapper">
           <table class="pipe-table">
@@ -110,6 +110,7 @@
               <tr>
                 <th scope="col">Pipe size (DN)</th>
                 <th scope="col">Length (m)</th>
+                <th scope="col">Volume per metre (m³)</th>
                 <th scope="col">Installation volume (m³)</th>
                 <th scope="col">Purge volume (m³)</th>
                 <th scope="col">Actions</th>
@@ -121,8 +122,12 @@
         </div>
         <div class="pipe-inputs">
           <div>
-            <label for="meter-select">Meter (Table 3)</label>
-            <select id="meter-select"></select>
+            <label for="diaphragm-meter-select">Diaphragm meter (Table 3)</label>
+            <select id="diaphragm-meter-select"></select>
+          </div>
+          <div>
+            <label for="rotary-meter-select">Rotary meter (Table 3)</label>
+            <select id="rotary-meter-select"></select>
           </div>
           <div>
             <label for="purge-hose-size">Purge hose size (Table 4)</label>
@@ -379,6 +384,16 @@
             <a href="https://www.nationalgas.com/safety" target="_blank" rel="noopener noreferrer">National Gas – Safety and emergency procedures</a>
           </li>
         </ul>
+      </div>
+      <div class="version-info">
+        <h3>Version traceability</h3>
+        <p>
+          Procedure builder version <strong id="app-version">—</strong><br />
+          Gas sizing dataset version <strong id="data-version">—</strong>
+        </p>
+        <p class="version-note">
+          Record these identifiers when printing or exporting so that any future corrections can be applied to the correct release.
+        </p>
       </div>
     </section>
   </main>
