@@ -79,6 +79,16 @@ export const PURGE_HOSE = [
   { size: 'TTD Max', hoseVolume_m3: NaN }
 ];
 
+export const TABLE6 = [
+  { gauge: 'Water SG', range: '0-120', GRM: 0.5, TTD_Max: 30 },
+  { gauge: 'High SG', range: '0-200', GRM: 1.0, TTD_Max: 45 },
+  { gauge: 'Elec 1 dp', range: '0-200', GRM: 0.5, TTD_Max: 30 },
+  { gauge: 'Elec 2 dp', range: '0-200', GRM: 0.1, TTD_Max: 15 },
+  { gauge: 'Elec 1dp', range: '0-2000', GRM: 0.5, TTD_Max: 30 },
+  { gauge: 'Elec 0dp', range: '0-20000', GRM: 5.0, TTD_Max: 60 },
+  { gauge: 'Mercury', range: '0-1000', GRM: 7.0, TTD_Max: 60 }
+];
+
 export const TABLE12 = [
   { dn: 'DN20', f1: 0.6, f2: 0.01, f3: 0.7, f4: NaN },
   { dn: 'DN25', f1: 0.6, f2: 0.02, f3: 1.0, f4: NaN },
@@ -128,6 +138,9 @@ export const ROTARY_METER_MAP = mapFromMeters(ROTARY_METERS);
 export const HOSE_MAP = Object.fromEntries(PURGE_HOSE.map((h) => [h.size, h.hoseVolume_m3]));
 export const F1_MAP = Object.fromEntries(GAS_FACTORS_F1.map((g) => [g.gas.toLowerCase(), { gas: g.F1_gas, n2: g.F1_n2 }]));
 export const F3_MAP = Object.fromEntries(OPERATING_FACTORS_F3.map((g) => [g.gas.toLowerCase(), { gas: g.F3_gas, n2: g.F3_n2 }]));
+export const TABLE6_MAP = Object.fromEntries(
+  TABLE6.map((entry) => [entry.gauge, { range: entry.range, GRM: entry.GRM, TTD_Max: entry.TTD_Max }])
+);
 export const TABLE12_MAP = Object.fromEntries(TABLE12.map((e) => [e.dn, { f1: e.f1, f2: e.f2, f3: e.f3, f4: e.f4 }]));
 
 export const DEFAULT_PURGE_MULTIPLIER = 1.5;
@@ -176,9 +189,16 @@ export function computeTotals({
 
   const hoseVol = purgeHoseSize ? HOSE_MAP[purgeHoseSize] ?? 0 : 0;
 
+  const systemComponentsVolume =
+    pipeInstall + diaphragmVolumes.install + rotaryVolumes.install + (Number.isFinite(hoseVol) ? hoseVol : 0);
+  const fittingsAllowance = systemComponentsVolume * 0.1;
+  const estimatedSystemVolume = systemComponentsVolume + fittingsAllowance;
+
   return {
     installVolume_m3: pipeInstall + diaphragmVolumes.install + rotaryVolumes.install,
     purgeVolume_m3: pipePurge + diaphragmVolumes.purge + rotaryVolumes.purge + hoseVol,
+    fittingsAllowance_m3: fittingsAllowance,
+    estimatedSystemVolume_m3: estimatedSystemVolume,
     breakdown: {
       pipeInstall_m3: pipeInstall,
       pipePurge_m3: pipePurge,

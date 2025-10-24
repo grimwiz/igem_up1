@@ -352,7 +352,7 @@ details summary {
   text-align: right;
 }
 
-.pipe-table input.numeric-readonly {
+input.numeric-readonly {
   width: 100%;
   border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: 6px;
@@ -363,7 +363,7 @@ details summary {
   color: inherit;
 }
 
-.pipe-table input.numeric-readonly:focus {
+input.numeric-readonly:focus {
   outline: none;
   box-shadow: 0 0 0 2px rgba(0, 94, 165, 0.25);
 }

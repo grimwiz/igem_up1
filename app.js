@@ -3,6 +3,9 @@ import {
   HOSE_MAP,
   DIAPHRAGM_METERS,
   ROTARY_METERS,
+  TABLE6,
+  TABLE6_MAP,
+  TABLE12_MAP,
   computeTotals,
   DEFAULT_PURGE_MULTIPLIER,
   GAS_SIZING_DATA_VERSION,
@@ -11,7 +14,7 @@ import {
 } from './gasSizing.js';
 
 const STORAGE_KEY = 'igem-up1-procedure';
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.2.0';
 const INPUT_SELECTOR =
   'input[type="text"], input[type="number"], input[type="date"], input[type="hidden"], textarea, select, input[type="checkbox"]';
 
@@ -113,6 +116,15 @@ const formatNumber = (value, decimals = 2) => {
 
 const formatVolume = (value) => formatNumber(value, 4);
 
+const updateReadOnlyInput = (input, value) => {
+  if (!input) return;
+  const newValue = value ?? '';
+  if (input.value !== newValue) {
+    input.value = newValue;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+};
+
 const normaliseLength = (value) => {
   if (value === null || value === undefined || value === '') return 0;
   if (typeof value === 'number') {
@@ -133,6 +145,7 @@ function initialisePipeCalculator() {
   const totalsBody = document.getElementById('pipe-volume-breakdown-body');
   const segmentBody = document.getElementById('pipe-segment-breakdown-body');
   const hiddenField = document.getElementById('pipe-configuration');
+  const systemVolumeInput = document.getElementById('volume');
 
   if (
     !pipeRowsBody ||
@@ -144,7 +157,8 @@ function initialisePipeCalculator() {
     !summary ||
     !totalsBody ||
     !segmentBody ||
-    !hiddenField
+    !hiddenField ||
+    !systemVolumeInput
   ) {
     return;
   }
@@ -380,6 +394,21 @@ function initialisePipeCalculator() {
         purgeMultiplier: multiplier
       });
       const breakdown = totals.breakdown;
+      const systemVolumeBase =
+        breakdown.pipeInstall_m3 +
+        breakdown.diaphragmInstall_m3 +
+        breakdown.rotaryInstall_m3 +
+        (Number.isFinite(breakdown.purgeHose_m3) ? breakdown.purgeHose_m3 : 0);
+      const fittingsAllowance = totals.fittingsAllowance_m3 ?? systemVolumeBase * 0.1;
+      const estimatedSystemVolume = totals.estimatedSystemVolume_m3 ?? systemVolumeBase + fittingsAllowance;
+
+      if (systemVolumeInput) {
+        const newValue = Number.isFinite(estimatedSystemVolume) ? estimatedSystemVolume.toFixed(4) : '';
+        if (systemVolumeInput.value !== newValue) {
+          systemVolumeInput.value = newValue;
+          systemVolumeInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      }
 
       updateAllRowVolumes(multiplier);
 
@@ -413,6 +442,9 @@ function initialisePipeCalculator() {
         )} m³ + diaphragm ${formatVolume(breakdown.diaphragmPurge_m3)} m³ + rotary ${formatVolume(
           breakdown.rotaryPurge_m3
         )} m³ + hose ${formatVolume(breakdown.purgeHose_m3)} m³).</p>
+        <p><strong>Estimated system volume:</strong> ${formatVolume(estimatedSystemVolume)} m³ including ${formatVolume(
+          fittingsAllowance
+        )} m³ (10% fittings allowance).</p>
         <p>${multiplierSentence}</p>
         <p>${meterNarrative} ${hoseSentence}</p>
       `;
@@ -425,6 +457,8 @@ function initialisePipeCalculator() {
         ['Rotary installation (Table 3)', formatVolume(breakdown.rotaryInstall_m3)],
         ['Rotary purge (Table 3)', formatVolume(breakdown.rotaryPurge_m3)],
         ['Purge hose allowance', formatVolume(breakdown.purgeHose_m3)],
+        ['Fittings allowance (10%)', formatVolume(fittingsAllowance)],
+        ['Estimated system volume', formatVolume(estimatedSystemVolume)],
         ['Total installation', formatVolume(totals.installVolume_m3)],
         ['Total purge', formatVolume(totals.purgeVolume_m3)]
       ];
@@ -521,6 +555,73 @@ function initialisePipeCalculator() {
   restoreFromHidden();
 }
 
+function initialisePurgeHelpers() {
+  const purgePipeSelect = document.getElementById('purge-pipe-diameter');
+  const purgeFlowInput = document.getElementById('purge-max-flow-rate');
+  const purgeTimeInput = document.getElementById('purge-time-minutes');
+  const gaugeSelect = document.getElementById('gauge-choice');
+  const gaugeRangeInput = document.getElementById('gauge-range');
+  const gaugeGrmInput = document.getElementById('gauge-grm');
+  const gaugeTtdInput = document.getElementById('gauge-ttd-max');
+
+  if (purgePipeSelect && purgeFlowInput && purgeTimeInput) {
+    const purgePipeOptions = Object.keys(TABLE12_MAP).sort((a, b) =>
+      a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+    );
+    if (!purgePipeSelect.options.length) {
+      purgePipeSelect.innerHTML = purgePipeOptions.map((dn) => `<option value="${dn}">${dn}</option>`).join('');
+    }
+    if (!purgePipeSelect.value && purgePipeOptions.length) {
+      purgePipeSelect.value = purgePipeOptions[0];
+    }
+
+    const updatePurgeOutputs = () => {
+      const selection = purgePipeSelect.value;
+      const entry = TABLE12_MAP[selection];
+      if (!entry) {
+        updateReadOnlyInput(purgeFlowInput, '');
+        updateReadOnlyInput(purgeTimeInput, '');
+        return;
+      }
+      const flowDisplay = Number.isFinite(entry.f1) ? formatNumber(entry.f1, 2) : '—';
+      const timeMinutes = Number.isFinite(entry.f3) ? formatNumber(entry.f3, 0) : '—';
+      updateReadOnlyInput(purgeFlowInput, flowDisplay);
+      updateReadOnlyInput(purgeTimeInput, timeMinutes);
+    };
+
+    purgePipeSelect.addEventListener('change', updatePurgeOutputs);
+    document.addEventListener('procedure-data-updated', updatePurgeOutputs);
+    updatePurgeOutputs();
+  }
+
+  if (gaugeSelect && gaugeRangeInput && gaugeGrmInput && gaugeTtdInput) {
+    if (!gaugeSelect.options.length) {
+      gaugeSelect.innerHTML = TABLE6.map((entry) => `<option value="${entry.gauge}">${entry.gauge}</option>`).join('');
+    }
+    if (!gaugeSelect.value && TABLE6.length) {
+      gaugeSelect.value = TABLE6[0].gauge;
+    }
+
+    const updateGaugeOutputs = () => {
+      const selection = gaugeSelect.value;
+      const entry = TABLE6_MAP[selection];
+      if (!entry) {
+        updateReadOnlyInput(gaugeRangeInput, '');
+        updateReadOnlyInput(gaugeGrmInput, '');
+        updateReadOnlyInput(gaugeTtdInput, '');
+        return;
+      }
+      updateReadOnlyInput(gaugeRangeInput, entry.range ?? '');
+      updateReadOnlyInput(gaugeGrmInput, Number.isFinite(entry.GRM) ? formatNumber(entry.GRM, 1) : '—');
+      updateReadOnlyInput(gaugeTtdInput, Number.isFinite(entry.TTD_Max) ? formatNumber(entry.TTD_Max, 0) : '—');
+    };
+
+    gaugeSelect.addEventListener('change', updateGaugeOutputs);
+    document.addEventListener('procedure-data-updated', updateGaugeOutputs);
+    updateGaugeOutputs();
+  }
+}
+
 function calculateTestPlan() {
   const summary = document.getElementById('test-calculation-summary');
   const details = document.getElementById('test-calculation-details-body');
@@ -548,9 +649,9 @@ function calculateTestPlan() {
 
   if (!Number.isFinite(designPressure) || !Number.isFinite(systemVolume)) {
     summary.innerHTML =
-      '<p>Please provide the design or operating pressure and the estimated system volume to generate recommendations.</p>';
+      '<p>Please provide the design or operating pressure to generate recommendations. The estimated system volume is calculated automatically from the pipe schedule.</p>';
     details.innerHTML =
-      '<p>Set the operating pressure in the Pipework Overview and enter an estimated system volume. Optional fields help refine the stabilisation and temperature allowances.</p>';
+      '<p>Set the operating pressure in the Pipework Overview. Build the pipe schedule above to calculate the estimated system volume. Optional fields help refine the stabilisation and temperature allowances.</p>';
     return;
   }
 
@@ -613,7 +714,7 @@ function calculateTestPlan() {
   const detailedRows = [
     ['Design pressure (mbar)', formatNumber(designPressure, 2)],
     ['Operating pressure (mbar)', Number.isFinite(operatingPressure) ? formatNumber(operatingPressure, 2) : 'Not provided'],
-    ['System volume (m³)', formatNumber(systemVolume, 3)],
+    ['Estimated system volume (m³)', formatNumber(systemVolume, 3)],
     ['Expected fill rate (m³/h)', Number.isFinite(fillRate) ? formatNumber(fillRate, 2) : 'Not provided'],
     ['Start temperature (°C)', Number.isFinite(startTemp) ? formatNumber(startTemp, 1) : 'Not provided'],
     ['End temperature (°C)', Number.isFinite(endTemp) ? formatNumber(endTemp, 1) : 'Not provided']
@@ -876,6 +977,7 @@ if (queryMode === 'new') {
 
 setVersionInfo();
 initialisePipeCalculator();
+initialisePurgeHelpers();
 loadState();
 calculateTestPlan();
 registerServiceWorker();
