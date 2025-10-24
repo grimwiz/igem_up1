@@ -86,6 +86,18 @@ section h3 {
   overflow: hidden;
   white-space: nowrap;
 }
+
+.sr-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  border: 0;
+  clip: rect(0, 0, 0, 0);
+  overflow: hidden;
+  white-space: nowrap;
+}
 label {
   display: block;
   font-weight: 600;
@@ -347,6 +359,17 @@ details summary {
   text-align: left;
 }
 
+.purge-hose-wrapper {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.purge-hose-wrapper h4 {
+  margin: 0;
+  color: var(--primary);
+  font-size: 1.05rem;
+}
+
 .pipe-table td.numeric,
 .pipe-table th.numeric {
   text-align: right;
@@ -389,34 +412,50 @@ input.numeric-readonly:focus {
   background: #fff;
 }
 
-.reference-data-section {
-  display: flex;
-  flex-direction: column;
+.reference-table-container {
+  display: grid;
   gap: 1rem;
 }
 
-.reference-table-container {
-  display: grid;
-  gap: 1.5rem;
-}
-
-.reference-table {
-  background: #f8fafc;
-  border-radius: 12px;
+.reference-table-container details {
   border: 1px solid #e0e4ea;
-  padding: 1.25rem;
+  border-radius: 12px;
+  padding: 0.85rem 1.1rem;
+  background: #f8fafc;
 }
 
-.reference-table h3 {
-  margin-top: 0;
-  margin-bottom: 0.5rem;
+.reference-table-container summary {
+  cursor: pointer;
+  font-weight: 600;
   color: var(--primary);
+  list-style: none;
 }
 
-.reference-table p {
-  margin-top: 0;
-  margin-bottom: 0.75rem;
+.reference-table-container summary::-webkit-details-marker {
+  display: none;
+}
+
+.reference-table-container summary::before {
+  content: '▸';
+  display: inline-block;
+  margin-right: 0.5rem;
+  transition: transform 0.2s ease;
+}
+
+.reference-table-container details[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.reference-table-container .reference-table-body {
+  margin-top: 0.75rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.reference-table-summary {
+  margin: 0.5rem 0 0;
   color: var(--muted);
+  font-size: 0.95rem;
 }
 
 .reference-data-table {

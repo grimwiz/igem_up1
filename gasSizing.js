@@ -288,6 +288,9 @@ export const PURGE_HOSES = [
 
 export const PIPE_SEGMENT_LIBRARY = [...PIPE_LIBRARY, ...PURGE_HOSES];
 
+export const PIPE_SIZES = PIPE_LIBRARY;
+export const PURGE_HOSE_SIZES = PURGE_HOSES;
+
 export const TABLE6 = [
   { gauge: 'Water SG', range: '0-120', GRM: 0.5, TTD_Max: 30 },
   { gauge: 'High SG', range: '0-200', GRM: 1.0, TTD_Max: 45 },
@@ -352,6 +355,15 @@ export const TABLE12_MAP = Object.fromEntries(TABLE12.map((e) => [e.dn, { f1: e.
 
 export const DEFAULT_PURGE_MULTIPLIER = 1.5;
 
+export const GAS_TYPE_OPTIONS = [
+  { value: 'Natural', label: 'Natural Gas' },
+  { value: 'Propane', label: 'Propane' },
+  { value: 'Butane', label: 'Butane' },
+  { value: 'Lpg/Air (Sng)', label: 'LPG/Air (SNG)' },
+  { value: 'Lpg/Air (Smg)', label: 'LPG/Air (SMG)' },
+  { value: 'Coal Gas', label: 'Coal Gas' }
+];
+
 export function getPipeSegment(dn) {
   const entry = PIPE_MAP[dn];
   if (!entry) throw new Error(`Unknown pipe or purge hose: ${dn}`);
@@ -368,14 +380,13 @@ export function pipePurgeVolume(dn, length_m, purgeMultiplier = DEFAULT_PURGE_MU
   return pipeInstallVolume(dn, length_m) * purgeMultiplier;
 }
 
-const getMeterVolumes = (map, meterName) => {
+const getMeterInstallVolume = (map, meterName) => {
   if (!meterName || meterName.toLowerCase() === 'no meter') {
-    return { install: 0, purge: 0 };
+    return 0;
   }
   const entry = map[meterName];
   if (!entry) throw new Error(`Unknown meter: ${meterName}`);
-  const purge = entry.purge && entry.purge > 0 ? entry.purge : entry.install * DEFAULT_PURGE_MULTIPLIER;
-  return { install: entry.install, purge };
+  return entry.install;
 };
 
 /**
@@ -387,33 +398,50 @@ const getMeterVolumes = (map, meterName) => {
  */
 export function computeTotals({
   pipes = [],
+  purgeHose = null,
   diaphragmMeter = null,
   rotaryMeter = null,
   purgeMultiplier = DEFAULT_PURGE_MULTIPLIER
 } = {}) {
   const pipeInstall = pipes.reduce((sum, seg) => sum + pipeInstallVolume(seg.dn, seg.length_m), 0);
-  const pipePurge = pipes.reduce((sum, seg) => sum + pipePurgeVolume(seg.dn, seg.length_m, purgeMultiplier), 0);
+  const purgeHoseInstall =
+    purgeHose && purgeHose.dn ? pipeInstallVolume(purgeHose.dn, purgeHose.length_m ?? 0) : 0;
 
-  const diaphragmVolumes = getMeterVolumes(DIAPHRAGM_METER_MAP, diaphragmMeter);
-  const rotaryVolumes = getMeterVolumes(ROTARY_METER_MAP, rotaryMeter);
-  const diaphragmPurgeAllowance = diaphragmVolumes.purge * DIAPHRAGM_PURGE_MULTIPLIER;
+  const pipeInstallWithHose = pipeInstall + purgeHoseInstall;
 
-  const systemComponentsVolume = pipeInstall + diaphragmVolumes.install + rotaryVolumes.install;
+  const diaphragmInstall = getMeterInstallVolume(DIAPHRAGM_METER_MAP, diaphragmMeter);
+  const rotaryInstall = getMeterInstallVolume(ROTARY_METER_MAP, rotaryMeter);
+  const meterInstallTotal = diaphragmInstall + rotaryInstall;
+  const meterInstallWithFittings = meterInstallTotal * 1.1;
+
+  const pipePurge = pipeInstall * purgeMultiplier;
+  const purgeHosePurge = purgeHoseInstall * purgeMultiplier;
+  const diaphragmPurge = diaphragmInstall * purgeMultiplier;
+  const rotaryPurge = rotaryInstall * purgeMultiplier;
+  const purgeBeforeFittings = pipePurge + purgeHosePurge + diaphragmPurge + rotaryPurge;
+  const purgeWithFittings = purgeBeforeFittings * 1.1;
+
+  const systemComponentsVolume = pipeInstallWithHose + meterInstallTotal;
   const fittingsAllowance = systemComponentsVolume * 0.1;
   const estimatedSystemVolume = systemComponentsVolume + fittingsAllowance;
 
   return {
-    installVolume_m3: pipeInstall + diaphragmVolumes.install + rotaryVolumes.install,
-    purgeVolume_m3: pipePurge + diaphragmPurgeAllowance + rotaryVolumes.purge,
+    installVolume_m3: pipeInstallWithHose + meterInstallWithFittings,
+    purgeVolume_m3: purgeWithFittings,
     fittingsAllowance_m3: fittingsAllowance,
     estimatedSystemVolume_m3: estimatedSystemVolume,
     breakdown: {
       pipeInstall_m3: pipeInstall,
+      purgeHoseInstall_m3: purgeHoseInstall,
+      diaphragmInstall_m3: diaphragmInstall,
+      rotaryInstall_m3: rotaryInstall,
+      meterInstallTotal_m3: meterInstallTotal,
+      meterInstallWithFittings_m3: meterInstallWithFittings,
       pipePurge_m3: pipePurge,
-      diaphragmInstall_m3: diaphragmVolumes.install,
-      diaphragmPurge_m3: diaphragmPurgeAllowance,
-      rotaryInstall_m3: rotaryVolumes.install,
-      rotaryPurge_m3: rotaryVolumes.purge
+      purgeHosePurge_m3: purgeHosePurge,
+      diaphragmPurge_m3: diaphragmPurge,
+      rotaryPurge_m3: rotaryPurge,
+      purgeBeforeFittings_m3: purgeBeforeFittings
     }
   };
 }
