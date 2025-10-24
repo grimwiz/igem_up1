@@ -91,10 +91,18 @@
               tabindex="0"
               role="button"
               aria-label="Explanation for system volume"
-              data-popover="Sum of all pipe and component internal volumes being tested. Determines hold and purge times."
+              data-popover="Calculated automatically from pipe, meter and purge hose volumes with an additional 10% allowance for fittings. Used to determine hold and purge times."
             ></span>
           </label>
-          <input id="volume" type="number" min="0" step="0.01" />
+          <input
+            id="volume"
+            type="text"
+            class="numeric-readonly"
+            inputmode="decimal"
+            readonly
+            placeholder="Calculated automatically"
+            value="0.0000"
+          />
         </div>
       </div>
       <div class="calculation-block" id="pipe-volume-calculator">
@@ -271,7 +279,8 @@
         </div>
         <button type="button" id="calculate-test-plan">Calculate Recommendations</button>
         <div class="calculation-results" id="test-calculation-summary" role="status" aria-live="polite">
-          Enter design pressure, volume and optional temperature data to generate recommendations.
+          Set the design or operating pressure and build the pipe schedule to generate recommendations. Optional temperature
+          data refines stabilisation advice.
         </div>
         <details id="test-calculation-details">
           <summary>Details</summary>
@@ -296,6 +305,36 @@
         <div>
           <label for="purge-medium">Purge Medium</label>
           <input id="purge-medium" type="text" placeholder="e.g. Nitrogen" />
+        </div>
+        <div>
+          <label for="purge-pipe-diameter">Pipe diameter to be purged (Table 12)</label>
+          <select id="purge-pipe-diameter"></select>
+        </div>
+        <div>
+          <label for="purge-max-flow-rate">Maximum purge flow rate (m³/min)</label>
+          <input id="purge-max-flow-rate" type="text" class="numeric-readonly" readonly placeholder="Auto" />
+        </div>
+        <div>
+          <label for="purge-time-minutes">Purge time at maximum flow (minutes)</label>
+          <input id="purge-time-minutes" type="text" class="numeric-readonly" readonly placeholder="Auto" />
+        </div>
+      </div>
+      <div class="two-column">
+        <div>
+          <label for="gauge-choice">Gauge choice (Table 6)</label>
+          <select id="gauge-choice"></select>
+        </div>
+        <div>
+          <label for="gauge-range">Gauge range</label>
+          <input id="gauge-range" type="text" class="numeric-readonly" readonly placeholder="Auto" />
+        </div>
+        <div>
+          <label for="gauge-grm">Gauge reading multiplier (GRM)</label>
+          <input id="gauge-grm" type="text" class="numeric-readonly" readonly placeholder="Auto" />
+        </div>
+        <div>
+          <label for="gauge-ttd-max">TTD max (minutes)</label>
+          <input id="gauge-ttd-max" type="text" class="numeric-readonly" readonly placeholder="Auto" />
         </div>
       </div>
       <label for="purge-calculations">Purge Volume Calculations</label>
