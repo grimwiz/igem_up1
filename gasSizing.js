@@ -411,10 +411,11 @@ export function computeTotals({
   const rotaryVolumes = getMeterVolumes(ROTARY_METER_MAP, rotaryMeter);
   const diaphragmInstall = diaphragmVolumes.install;
   const rotaryInstall = rotaryVolumes.install;
-  const diaphragmPurge = diaphragmVolumes.purge;
+  const diaphragmPurge = diaphragmVolumes.purge * DIAPHRAGM_PURGE_MULTIPLIER;
   const rotaryPurge = rotaryVolumes.purge;
   const meterInstallTotal = diaphragmInstall + rotaryInstall;
   const meterInstallWithFittings = meterInstallTotal * 1.1;
+  const pipeWithFittings = pipeInstall * 1.1;
 
   const pipePurge = pipeInstall * purgeMultiplier;
   const purgeHosePurge = purgeHoseBaseVolume * purgeMultiplier;
@@ -424,7 +425,7 @@ export function computeTotals({
   const purgeWithFittings = purgeBeforeFittings + purgeFittingsAllowance;
 
   const systemComponentsVolume = pipeInstall + meterInstallTotal;
-  const fittingsAllowance = systemComponentsVolume * 0.1;
+  const fittingsAllowance = pipeWithFittings - pipeInstall;
   const estimatedSystemVolume = systemComponentsVolume + fittingsAllowance;
 
   return {

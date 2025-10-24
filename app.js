@@ -15,7 +15,8 @@ import {
   pipePurgeVolume,
   getPipeSegment,
   STANDARD_REFERENCE_TABLES,
-  GAS_TYPE_OPTIONS
+  GAS_TYPE_OPTIONS,
+  DIAPHRAGM_PURGE_MULTIPLIER
 } from './gasSizing.js';
 
 const STORAGE_KEY = 'igem-up1-procedure';
@@ -624,21 +625,23 @@ function initialisePipeCalculator() {
       summary.innerHTML = `
         <p><strong>Total installation volume:</strong> ${formatVolume(totals.installVolume_m3)} m³.</p>
         <p><strong>Total purge volume:</strong> ${formatVolume(totals.purgeVolume_m3)} m³.</p>
-        <p><strong>Estimated system volume (incl. fittings):</strong> ${formatVolume(estimatedSystemVolume)} m³.</p>
-        <p>${multiplierSentence} Meter purge allowances use the Table 3 values. Purge hoses do not contribute to installation volume.</p>
+        <p><strong>Total systems volume (incl. fittings):</strong> ${formatVolume(estimatedSystemVolume)} m³.</p>
+        <p>${multiplierSentence} Meter purge allowances use the Table 3 values (diaphragm figures multiplied by ${formatNumber(
+          DIAPHRAGM_PURGE_MULTIPLIER,
+          0
+        )}). Purge hoses do not contribute to installation volume.</p>
         <p>${meterNarrative} See the breakdown for the step-by-step calculations.</p>
       `;
 
       const installationRows = [
         ['Step 1 – Pipe installation (Table 4)', formatVolume(pipeInstallTotal)],
         ['Step 2 – Meter installation (Table 3)', formatVolume(meterInstallTotal)],
+        ['Step 3 – Base system volume = Step 1 + Step 2', formatVolume(systemBaseVolume)],
         [
-          'Step 3 – Total installation volume = Step 1 + (Step 2 × 1.1)',
-          formatVolume(totals.installVolume_m3)
+          'Step 4 – Fittings allowance (Step 1 × 1.1 − Step 1)',
+          formatVolume(fittingsAllowance)
         ],
-        ['Step 4 – Base system volume = Step 1 + Step 2', formatVolume(systemBaseVolume)],
-        ['Step 5 – Fittings allowance (10% of Step 4)', formatVolume(fittingsAllowance)],
-        ['Step 6 – Estimated system volume = Step 4 + Step 5', formatVolume(estimatedSystemVolume)]
+        ['Step 5 – Total systems volume = Step 3 + Step 4', formatVolume(estimatedSystemVolume)]
       ];
       installationBody.innerHTML = installationRows
         .map((row) => `<tr><td>${row[0]}</td><td class="numeric">${row[1]}</td></tr>`)
@@ -646,17 +649,23 @@ function initialisePipeCalculator() {
 
       const purgeRows = [
         [
-          `Step 1 – Pipe purge contribution (Step 1 × ${formatNumber(multiplier, 2)})`,
+          `Step 6 – Pipe purge contribution (length × volume/m × ${formatNumber(multiplier, 2)})`,
           formatVolume(pipePurgeTotal)
         ],
         [
-          `Step 2 – Purge hose purge contribution (length × ${formatNumber(multiplier, 2)})`,
+          `Step 7 – Purge hose purge contribution (length × volume/m × ${formatNumber(multiplier, 2)})`,
           formatVolume(purgeHosePurge)
         ],
-        ['Step 3 – Meter purge contribution (Table 3)', formatVolume(meterPurgeTotal)],
-        ['Step 4 – Total purge before fittings = Steps 1–3', formatVolume(purgeBeforeFittings)],
-        ['Step 5 – Fittings allowance (10% of Step 4)', formatVolume(purgeFittingsAllowance)],
-        ['Step 6 – Total purge volume = Step 4 + Step 5', formatVolume(totals.purgeVolume_m3)]
+        [
+          `Step 8 – Meter purge contribution (Table 3 × ${formatNumber(
+            DIAPHRAGM_PURGE_MULTIPLIER,
+            0
+          )} for diaphragm meters)`,
+          formatVolume(meterPurgeTotal)
+        ],
+        ['Step 9 – Total purge before fittings = Step 6 + Step 7 + Step 8', formatVolume(purgeBeforeFittings)],
+        ['Step 10 – Fittings allowance (10% of Step 9)', formatVolume(purgeFittingsAllowance)],
+        ['Step 11 – Total purge volume = Step 9 + Step 10', formatVolume(totals.purgeVolume_m3)]
       ];
       purgeBody.innerHTML = purgeRows
         .map((row) => `<tr><td>${row[0]}</td><td class="numeric">${row[1]}</td></tr>`)
@@ -1113,7 +1122,7 @@ function calculateTestPlan() {
   const detailedRows = [
     ['Design pressure (mbar)', formatNumber(designPressure, 2)],
     ['Operating pressure (mbar)', Number.isFinite(operatingPressure) ? formatNumber(operatingPressure, 2) : 'Not provided'],
-    ['Estimated system volume (m³)', formatNumber(systemVolume, 3)],
+    ['Total systems volume (m³)', formatNumber(systemVolume, 3)],
     ['Expected fill rate (m³/h)', Number.isFinite(fillRate) ? formatNumber(fillRate, 2) : 'Not provided'],
     ['Start temperature (°C)', Number.isFinite(startTemp) ? formatNumber(startTemp, 1) : 'Not provided'],
     ['End temperature (°C)', Number.isFinite(endTemp) ? formatNumber(endTemp, 1) : 'Not provided']
