@@ -280,14 +280,15 @@ function initialisePipeCalculator() {
   const rotarySelect = document.getElementById('rotary-meter-select');
   const purgeMultiplierInput = document.getElementById('purge-multiplier');
   const summary = document.getElementById('pipe-volume-summary');
-  const totalsBody = document.getElementById('pipe-volume-breakdown-body');
+  const installationBody = document.getElementById('installation-breakdown-body');
+  const purgeBody = document.getElementById('purge-breakdown-body');
   const segmentBody = document.getElementById('pipe-segment-breakdown-body');
+  const meterBody = document.getElementById('meter-breakdown-body');
   const hiddenField = document.getElementById('pipe-configuration');
   const systemVolumeInput = document.getElementById('volume');
   const purgeVolumeInput = document.getElementById('purge-volume');
   const purgeHoseSelect = document.getElementById('purge-hose-size');
   const purgeHoseLengthInput = document.getElementById('purge-hose-length');
-  const purgeHoseVolumeInput = document.getElementById('purge-hose-volume');
   const purgeHoseInstallInput = document.getElementById('purge-hose-install-volume');
   const purgeHosePurgeInput = document.getElementById('purge-hose-purge-volume');
 
@@ -298,13 +299,14 @@ function initialisePipeCalculator() {
     !rotarySelect ||
     !purgeMultiplierInput ||
     !summary ||
-    !totalsBody ||
+    !installationBody ||
+    !purgeBody ||
     !segmentBody ||
+    !meterBody ||
     !hiddenField ||
     !systemVolumeInput ||
     !purgeHoseSelect ||
     !purgeHoseLengthInput ||
-    !purgeHoseVolumeInput ||
     !purgeHoseInstallInput ||
     !purgeHosePurgeInput
   ) {
@@ -420,20 +422,16 @@ function initialisePipeCalculator() {
   const updatePurgeHoseRow = (multiplierOverride) => {
     const multiplier = typeof multiplierOverride === 'number' ? multiplierOverride : getPurgeMultiplier();
     const lengthValue = normaliseLength(purgeHoseState?.length_m);
-    let installVolume = Number.NaN;
-    let purgeVolume = Number.NaN;
-    let volumePerMeter = Number.NaN;
+    let purgeVolume = 0;
     if (purgeHoseState?.dn) {
       try {
-        installVolume = pipeInstallVolume(purgeHoseState.dn, lengthValue);
         purgeVolume = pipePurgeVolume(purgeHoseState.dn, lengthValue, multiplier);
-        volumePerMeter = getPipeSegment(purgeHoseState.dn).volumePerMeter_m3;
       } catch (error) {
         console.error('Purge hose calculation failed', error);
+        purgeVolume = Number.NaN;
       }
     }
-    purgeHoseVolumeInput.value = formatVolume(volumePerMeter);
-    purgeHoseInstallInput.value = formatVolume(installVolume);
+    purgeHoseInstallInput.value = formatVolume(0);
     purgeHosePurgeInput.value = formatVolume(purgeVolume);
   };
 
@@ -485,12 +483,6 @@ function initialisePipeCalculator() {
       });
       lengthCell.appendChild(lengthInput);
 
-      const volumeCell = document.createElement('td');
-      volumeCell.classList.add('numeric');
-      const volumeInput = createReadonlyInput();
-      volumeInput.setAttribute('aria-label', 'Pipe volume per metre');
-      volumeCell.appendChild(volumeInput);
-
       const installCell = document.createElement('td');
       installCell.classList.add('numeric');
       const installInput = createReadonlyInput();
@@ -530,20 +522,12 @@ function initialisePipeCalculator() {
         } catch (error) {
           console.error('Pipe segment calculation failed', error);
         }
-        let volumePerMeter = Number.NaN;
-        try {
-          volumePerMeter = getPipeSegment(pipeSegments[index].dn).volumePerMeter_m3;
-        } catch (error) {
-          console.error('Unable to read pipe segment volume', error);
-        }
-        volumeInput.value = formatVolume(volumePerMeter);
         installInput.value = formatVolume(installVolume);
         purgeInput.value = formatVolume(purgeVolume);
       };
 
       row.appendChild(dnCell);
       row.appendChild(lengthCell);
-      row.appendChild(volumeCell);
       row.appendChild(installCell);
       row.appendChild(purgeCell);
       row.appendChild(actionsCell);
@@ -582,12 +566,18 @@ function initialisePipeCalculator() {
         purgeMultiplier: multiplier
       });
       const breakdown = totals.breakdown;
-      const pipeInstallTotal = breakdown.pipeInstall_m3 + breakdown.purgeHoseInstall_m3;
+      const pipeInstallTotal = breakdown.pipeInstall_m3;
       const meterInstallTotal = breakdown.meterInstallTotal_m3;
       const fittingsAllowance = totals.fittingsAllowance_m3;
+      const systemBaseVolume = totals.systemComponentsVolume_m3 ?? pipeInstallTotal + meterInstallTotal;
       const estimatedSystemVolume = totals.estimatedSystemVolume_m3;
-      const pipePurgeTotal = breakdown.pipePurge_m3 + breakdown.purgeHosePurge_m3;
-      const meterPurgeTotal = breakdown.diaphragmPurge_m3 + breakdown.rotaryPurge_m3;
+      const pipePurgeTotal = breakdown.pipePurge_m3;
+      const purgeHosePurge = breakdown.purgeHosePurge_m3;
+      const meterPurgeTotal =
+        breakdown.meterPurge_m3 ?? breakdown.diaphragmPurge_m3 + breakdown.rotaryPurge_m3;
+      const purgeBeforeFittings = breakdown.purgeBeforeFittings_m3;
+      const purgeFittingsAllowance =
+        breakdown.purgeFittingsAllowance_m3 ?? totals.purgeVolume_m3 - purgeBeforeFittings;
 
       if (systemVolumeInput) {
         const newValue = Number.isFinite(estimatedSystemVolume) ? estimatedSystemVolume.toFixed(4) : '';
@@ -608,52 +598,67 @@ function initialisePipeCalculator() {
       updateAllRowVolumes(multiplier);
 
       const multiplierSentence = multiplierValid
-        ? `Pipe purge uses ${formatNumber(multiplier, 2)} × the installed pipe volume as per IGEM/UP/1 Sheet 1.`
-        : `Default ${formatNumber(DEFAULT_PURGE_MULTIPLIER, 2)} × pipe purge factor applied because the override is empty or invalid.`;
-      const meterNarrative = [
-        hasDiaphragm
-          ? `Diaphragm meter ${diaphragmSelection.toUpperCase()} contributes ${formatVolume(
-              breakdown.diaphragmInstall_m3
-            )} m³ to the installation and ${formatVolume(
-              breakdown.diaphragmPurge_m3
-            )} m³ to the purge allowance (×${formatNumber(multiplier, 2)}).`
-          : 'No diaphragm meter selected, so no diaphragm allowance is included.',
-        hasRotary
-          ? `Rotary meter ${rotarySelection.toUpperCase()} contributes ${formatVolume(
-              breakdown.rotaryInstall_m3
-            )} m³ to the installation and ${formatVolume(
-              breakdown.rotaryPurge_m3
-            )} m³ to the purge allowance (×${formatNumber(multiplier, 2)}).`
-          : 'No rotary meter selected, so no rotary allowance is included.'
-      ].join(' ');
+        ? `Pipe and purge hose purge calculations use a factor of ${formatNumber(multiplier, 2)} applied to the Table 4 lengths.`
+        : `Default ${formatNumber(DEFAULT_PURGE_MULTIPLIER, 2)} purge factor applied to pipe and purge hose lengths because the override is empty or invalid.`;
+      const meterNarrativeParts = [];
+      if (hasDiaphragm) {
+        meterNarrativeParts.push(
+          `Diaphragm meter ${formatMeterLabel(diaphragmSelection || 'No Meter')} adds ${formatVolume(
+            breakdown.diaphragmInstall_m3
+          )} m³ installation allowance and ${formatVolume(breakdown.diaphragmPurge_m3)} m³ purge allowance from Table 3.`
+        );
+      } else {
+        meterNarrativeParts.push('No diaphragm meter selected, so no diaphragm allowance is included.');
+      }
+      if (hasRotary) {
+        meterNarrativeParts.push(
+          `Rotary meter ${formatMeterLabel(rotarySelection || 'No Meter')} adds ${formatVolume(
+            breakdown.rotaryInstall_m3
+          )} m³ installation allowance and ${formatVolume(breakdown.rotaryPurge_m3)} m³ purge allowance from Table 3.`
+        );
+      } else {
+        meterNarrativeParts.push('No rotary meter selected, so no rotary allowance is included.');
+      }
+      const meterNarrative = meterNarrativeParts.join(' ');
+
       summary.innerHTML = `
-        <p><strong>Total installation volume:</strong> ${formatVolume(totals.installVolume_m3)} m³ (pipework ${formatVolume(
-          pipeInstallTotal
-        )} m³ + meters ${formatVolume(breakdown.meterInstallWithFittings_m3)} m³ including 10% fittings allowance).</p>
-        <p><strong>Total purge volume:</strong> ${formatVolume(totals.purgeVolume_m3)} m³ (pipework ${formatVolume(
-          pipePurgeTotal
-        )} m³ + meters ${formatVolume(meterPurgeTotal)} m³, then ×1.1 fittings allowance).</p>
-        <p><strong>Estimated system volume:</strong> ${formatVolume(estimatedSystemVolume)} m³ including ${formatVolume(
-          fittingsAllowance
-        )} m³ (10% fittings allowance).</p>
-        <p>${multiplierSentence}</p>
-        <p>${meterNarrative} Purge hose allowances are calculated separately beneath the pipe table.</p>
+        <p><strong>Total installation volume:</strong> ${formatVolume(totals.installVolume_m3)} m³.</p>
+        <p><strong>Total purge volume:</strong> ${formatVolume(totals.purgeVolume_m3)} m³.</p>
+        <p><strong>Estimated system volume (incl. fittings):</strong> ${formatVolume(estimatedSystemVolume)} m³.</p>
+        <p>${multiplierSentence} Meter purge allowances use the Table 3 values. Purge hoses do not contribute to installation volume.</p>
+        <p>${meterNarrative} See the breakdown for the step-by-step calculations.</p>
       `;
 
-      const breakdownRows = [
-        ['Pipe installation (Table 4)', formatVolume(breakdown.pipeInstall_m3)],
-        ['Purge hose installation (Table 4)', formatVolume(breakdown.purgeHoseInstall_m3)],
-        ['Meter installation (Table 3)', formatVolume(meterInstallTotal)],
-        ['Meter installation including fittings (×1.1)', formatVolume(breakdown.meterInstallWithFittings_m3)],
-        [`Pipe purge allowance (×${formatNumber(multiplier, 2)})`, formatVolume(pipePurgeTotal)],
-        [`Meter purge allowance (×${formatNumber(multiplier, 2)})`, formatVolume(meterPurgeTotal)],
-        ['Total purge before fittings', formatVolume(breakdown.purgeBeforeFittings_m3)],
-        ['Total purge including fittings (×1.1)', formatVolume(totals.purgeVolume_m3)],
-        ['Fittings allowance (10% of system components)', formatVolume(fittingsAllowance)],
-        ['Estimated system volume (includes fittings)', formatVolume(estimatedSystemVolume)],
-        ['Total installation', formatVolume(totals.installVolume_m3)]
+      const installationRows = [
+        ['Step 1 – Pipe installation (Table 4)', formatVolume(pipeInstallTotal)],
+        ['Step 2 – Meter installation (Table 3)', formatVolume(meterInstallTotal)],
+        [
+          'Step 3 – Total installation volume = Step 1 + (Step 2 × 1.1)',
+          formatVolume(totals.installVolume_m3)
+        ],
+        ['Step 4 – Base system volume = Step 1 + Step 2', formatVolume(systemBaseVolume)],
+        ['Step 5 – Fittings allowance (10% of Step 4)', formatVolume(fittingsAllowance)],
+        ['Step 6 – Estimated system volume = Step 4 + Step 5', formatVolume(estimatedSystemVolume)]
       ];
-      totalsBody.innerHTML = breakdownRows
+      installationBody.innerHTML = installationRows
+        .map((row) => `<tr><td>${row[0]}</td><td class="numeric">${row[1]}</td></tr>`)
+        .join('');
+
+      const purgeRows = [
+        [
+          `Step 1 – Pipe purge contribution (Step 1 × ${formatNumber(multiplier, 2)})`,
+          formatVolume(pipePurgeTotal)
+        ],
+        [
+          `Step 2 – Purge hose purge contribution (length × ${formatNumber(multiplier, 2)})`,
+          formatVolume(purgeHosePurge)
+        ],
+        ['Step 3 – Meter purge contribution (Table 3)', formatVolume(meterPurgeTotal)],
+        ['Step 4 – Total purge before fittings = Steps 1–3', formatVolume(purgeBeforeFittings)],
+        ['Step 5 – Fittings allowance (10% of Step 4)', formatVolume(purgeFittingsAllowance)],
+        ['Step 6 – Total purge volume = Step 4 + Step 5', formatVolume(totals.purgeVolume_m3)]
+      ];
+      purgeBody.innerHTML = purgeRows
         .map((row) => `<tr><td>${row[0]}</td><td class="numeric">${row[1]}</td></tr>`)
         .join('');
 
@@ -662,10 +667,13 @@ function initialisePipeCalculator() {
           let install = Number.NaN;
           let purge = Number.NaN;
           let label = segment.dn;
+          let volumePerMeter = Number.NaN;
           try {
+            const segmentEntry = getPipeSegment(segment.dn);
             install = pipeInstallVolume(segment.dn, segment.length_m);
             purge = pipePurgeVolume(segment.dn, segment.length_m, multiplier);
-            label = getPipeSegment(segment.dn).label;
+            label = segmentEntry.label;
+            volumePerMeter = segmentEntry.volumePerMeter_m3;
           } catch (error) {
             console.error('Segment breakdown calculation failed', error);
           }
@@ -673,6 +681,7 @@ function initialisePipeCalculator() {
             <tr>
               <td>${label}</td>
               <td class="numeric">${formatNumber(segment.length_m, 2)}</td>
+              <td class="numeric">${formatVolume(volumePerMeter)}</td>
               <td class="numeric">${formatVolume(install)}</td>
               <td class="numeric">${formatVolume(purge)}</td>
             </tr>
@@ -682,13 +691,14 @@ function initialisePipeCalculator() {
 
       const purgeHoseRow = (() => {
         if (!purgeHoseTotals) return '';
-        let install = Number.NaN;
         let purge = Number.NaN;
         let label = purgeHoseTotals.dn;
+        let volumePerMeter = Number.NaN;
         try {
-          install = pipeInstallVolume(purgeHoseTotals.dn, purgeHoseTotals.length_m);
+          const hoseEntry = getPipeSegment(purgeHoseTotals.dn);
           purge = pipePurgeVolume(purgeHoseTotals.dn, purgeHoseTotals.length_m, multiplier);
-          label = getPipeSegment(purgeHoseTotals.dn).label;
+          label = hoseEntry.label;
+          volumePerMeter = hoseEntry.volumePerMeter_m3;
         } catch (error) {
           console.error('Purge hose breakdown calculation failed', error);
         }
@@ -696,17 +706,47 @@ function initialisePipeCalculator() {
           <tr>
             <td>${label}</td>
             <td class="numeric">${formatNumber(purgeHoseTotals.length_m, 2)}</td>
-            <td class="numeric">${formatVolume(install)}</td>
+            <td class="numeric">${formatVolume(volumePerMeter)}</td>
+            <td class="numeric">${formatVolume(0)}</td>
             <td class="numeric">${formatVolume(purge)}</td>
           </tr>
         `;
       })();
 
       segmentBody.innerHTML = segmentRows + purgeHoseRow;
+
+      const meterRows = [
+        {
+          label: formatMeterLabel(diaphragmSelection || 'No Meter'),
+          type: 'Diaphragm',
+          install: breakdown.diaphragmInstall_m3,
+          purge: breakdown.diaphragmPurge_m3
+        },
+        {
+          label: formatMeterLabel(rotarySelection || 'No Meter'),
+          type: 'Rotary',
+          install: breakdown.rotaryInstall_m3,
+          purge: breakdown.rotaryPurge_m3
+        }
+      ];
+      meterBody.innerHTML = meterRows
+        .map(
+          (row) => `
+            <tr>
+              <td>${row.label}</td>
+              <td>${row.type}</td>
+              <td class="numeric">${formatVolume(row.install)}</td>
+              <td class="numeric">${formatVolume(row.purge)}</td>
+            </tr>
+          `
+        )
+        .join('');
     } catch (error) {
       summary.innerHTML = `<p>Unable to calculate volumes: ${error instanceof Error ? error.message : 'Unknown error'}.</p>`;
-      totalsBody.innerHTML = '';
+      installationBody.innerHTML = '';
+      purgeBody.innerHTML = '';
       segmentBody.innerHTML = '';
+      meterBody.innerHTML = '';
       console.error('Volume calculation failed', error);
     }
   };
@@ -843,23 +883,45 @@ function initialisePurgeHelpers() {
   const gaugeGrmInput = document.getElementById('gauge-grm');
   const gaugeTtdInput = document.getElementById('gauge-ttd-max');
 
-  if (gasTypeSelect && !gasTypeSelect.options.length) {
-    gasTypeSelect.innerHTML = GAS_TYPE_OPTIONS.map(
-      (option) => `<option value="${option.value}">${option.label}</option>`
-    ).join('');
-    if (!gasTypeSelect.value && GAS_TYPE_OPTIONS.length) {
-      gasTypeSelect.value = GAS_TYPE_OPTIONS[0].value;
+  if (gasTypeSelect) {
+    if (!gasTypeSelect.options.length) {
+      gasTypeSelect.innerHTML = GAS_TYPE_OPTIONS.map(
+        (option) => `<option value="${option.value}">${option.label}</option>`
+      ).join('');
     }
-  }
-  if (gasTypeSelect && gasTypeSelect.value) {
-    const currentValue = gasTypeSelect.value;
-    const exactMatch = GAS_TYPE_OPTIONS.find((option) => option.value === currentValue);
-    if (!exactMatch) {
+
+    const normaliseGasSelection = () => {
+      if (!gasTypeSelect) return;
+      const currentValue = gasTypeSelect.value;
+      if (!currentValue) {
+        if (GAS_TYPE_OPTIONS.length) {
+          gasTypeSelect.value = GAS_TYPE_OPTIONS[0].value;
+        }
+        return;
+      }
+      const exactMatch = GAS_TYPE_OPTIONS.find((option) => option.value === currentValue);
+      if (exactMatch) return;
       const normalisedMatch = GAS_TYPE_OPTIONS.find(
         (option) => option.value.toLowerCase() === currentValue.toLowerCase()
       );
-      gasTypeSelect.value = normalisedMatch ? normalisedMatch.value : GAS_TYPE_OPTIONS[0]?.value ?? '';
-    }
+      if (normalisedMatch) {
+        gasTypeSelect.value = normalisedMatch.value;
+        return;
+      }
+      const labelMatch = GAS_TYPE_OPTIONS.find(
+        (option) => option.label.toLowerCase() === currentValue.toLowerCase()
+      );
+      if (labelMatch) {
+        gasTypeSelect.value = labelMatch.value;
+        return;
+      }
+      if (GAS_TYPE_OPTIONS.length) {
+        gasTypeSelect.value = GAS_TYPE_OPTIONS[0].value;
+      }
+    };
+
+    normaliseGasSelection();
+    document.addEventListener('procedure-data-updated', normaliseGasSelection);
   }
 
   if (purgePipeSelect && purgeFlowInput && purgeTimeInput) {
