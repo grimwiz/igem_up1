@@ -27,8 +27,7 @@ The site is static HTML/CSS/JS, so a minimal Nginx server is sufficient. The ste
 
 1. **Create the container**
    ```bash
-   pct create 123 local:vztmpl/debian-13-standard_13.0-1_amd64.tar.zst \
-     --hostname igem-up1 --memory 512 --cores 1 --net0 name=eth0,bridge=vmbr0,ip=dhcp --rootfs local-lvm:8
+   pct create 123 local:vztmpl/debian-13-standard_13.0-1_amd64.tar.zst      --hostname igem-up1 --memory 512 --cores 1 --net0 name=eth0,bridge=vmbr0,ip=dhcp --rootfs local-lvm:8
    pct start 123
    pct enter 123
    ```
@@ -36,19 +35,24 @@ The site is static HTML/CSS/JS, so a minimal Nginx server is sufficient. The ste
 2. **Install the required packages inside the container**
    ```bash
    apt update
-   apt install --yes nginx git
+   apt install --yes nginx git rsync
    ```
 
-3. **Deploy the web application**
+3. **Deploy the web application from your home directory**
    ```bash
-   cd /var/www
-   git clone https://github.com/<your-account>/igem_up1.git
-   cp -r igem_up1/* /var/www/html/
+   cd ~
+   git clone https://github.com/grimwiz/igem_ip1.git
+   rsync -av --delete igem_ip1/ /var/www/html/
    chown -R www-data:www-data /var/www/html
+   apt purge --yes git
+   apt autoremove --yes
    ```
 
-4. **Adjust Nginx (optional)** – To enforce HTTPS or tweak caching, create `/etc/nginx/sites-available/igem-up1` and symlink it into `sites-enabled`. Reload Nginx once satisfied:
+   Cloning into your home directory keeps `/var/www` reserved for the served artefacts only. Removing `git` afterwards trims the container attack surface once deployment is complete.
+
+4. **Harden Nginx with the provided security profile** – The repository ships with [`nginx/default.conf`](nginx/default.conf) which enables a strict Content Security Policy, referrer and permissions policies, disables MIME sniffing, and blocks clickjacking. Install it and reload Nginx:
    ```bash
+   cp ~/igem_ip1/nginx/default.conf /etc/nginx/conf.d/igem-up1.conf
    nginx -t
    systemctl reload nginx
    ```
@@ -59,18 +63,39 @@ The site is static HTML/CSS/JS, so a minimal Nginx server is sufficient. The ste
    ```
 
 With DHCP enabled, the container obtains an IP address from your LAN. Browse to `http://<container-ip>/` to use the tool.
-
 ## Packaging as a Standalone (Installable) Web App
 
 Because the project is static, you can ship it as a Progressive Web App (PWA) so users can “install” it to their phone home screen and run it offline.
 
-1. **Add a web app manifest** – `manifest.webmanifest` in this repository already sets the start URL (`./`), standalone display mode, colour palette, and embeds installable icons as base64 data URIs. Link it from `index.html` with `<link rel="manifest" href="manifest.webmanifest">`.
-2. **Register a service worker** – `sw.js` precaches the critical HTML and manifest assets using the Cache API, cleans up older caches, and falls back to cached content when offline. In `index.html`, register it with `navigator.serviceWorker.register('./sw.js')` after checking support.
-3. **Provide installable icons** – To avoid shipping binary PNGs in Git, the manifest and service worker embed procedurally generated icons as base64 data URIs and dynamically serve them when browsers request `icon-192.png`, `icon-512.png`, or `apple-touch-icon.png`. If you want to restyle the icon, update the helper in `scripts/generate_icons.py` and re-run it to print replacement data URIs for the manifest, HTML `<link>` tags, and service worker map.
-4. **Serve over HTTPS** – Modern browsers only allow installation when the app is served via HTTPS (or from `localhost`). Use Let’s Encrypt on your Nginx host or expose the container behind a reverse proxy that terminates TLS.
-5. **Test installation flows** – Use Chrome DevTools → *Application* → *Manifest* to verify all requirements are satisfied. On Android Chrome or iOS Safari (via Web Clips), you should now see an *Add to Home screen* prompt.
+1. **Manifest** – `manifest.webmanifest` declares an explicit `id`, `scope`, and the correct `start_url` so Android can detect installability. The icon assets are embedded as base64 data URIs (including a maskable variant) to avoid shipping standalone binaries while still satisfying PWA requirements.
+2. **Service worker** – `sw.js` precaches the HTML, CSS, JavaScript, and manifest, cleans up older caches, and falls back to cached content when offline. Registration now happens from `app.js`, keeping inline scripts out of the HTML for stricter security policies.
+3. **Installable icons** – Link the manifest from `index.html`; the embedded data URIs mean no additional files are required, yet Android Chrome will still surface an “Install app” banner because the icons satisfy size and maskable requirements.
+4. **Security context** – Installation prompts only appear on secure origins. Combine HTTPS with the provided Content Security Policy meta tag (and matching response headers) so the browser trusts the app shell.
+5. **Test installation flows** – Use Chrome DevTools → *Application* → *Manifest* to verify all requirements are satisfied. On Android Chrome you should now see an *Install IGEM/UP/1 process builder* menu item; on desktop Chromium the omnibox install icon remains available.
+
+> **Note:** Keep the data URI icons in place—earlier inline work removed the need for PNG files and avoids binary diffs in future pull requests.
 
 Once these steps are complete, the app runs offline using cached assets while continuing to store form progress in `localStorage`.
+## Security Hardening Checklist
+
+The application is designed to withstand common OWASP Top 10 risks for static sites:
+
+- **Strict Content Security Policy** – Inline scripts and styles were moved into `app.js` and `styles.css` so the page can enforce `script-src 'self'` and `style-src 'self'` without allowing unsafe inline code. Combined with the Nginx headers, this blocks reflected/stored XSS vectors.
+- **Robust headers** – `nginx/default.conf` applies `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, and cross-origin isolation headers to mitigate clickjacking, MIME sniffing, and data exfiltration.
+- **Scoped service worker caching** – `sw.js` pins cache keys with a versioned prefix, validates response status before caching, and falls back to known-good assets. Navigation requests degrade to the cached app shell so offline support does not introduce request smuggling.
+- **Input handling** – User-supplied values are stored locally and never interpolated into the DOM without numeric coercion, protecting against injection. The import routine validates that uploaded JSON is an object before applying it.
+- **Least-privilege container** – The Docker image runs Nginx as the unprivileged `nginx` user on port 8080 and only contains the static artefacts plus the hardened config.
+
+## Docker Deployment (minimal footprint)
+
+Build and run the container locally without installing a full web stack:
+
+```bash
+docker build -t igem-up1 .
+docker run --rm -p 8080:8080 igem-up1
+```
+
+The Dockerfile uses `nginx:alpine`, copies only the required static files, and relies on the same security headers described above. Because the container ships with Git removed, no package manager caches, and no separate icon binaries, the resulting image stays compact (<25 MB). Mount a volume at `/usr/share/nginx/html` if you want to override assets at runtime.
 
 ## Local Development
 
