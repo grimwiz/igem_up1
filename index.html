@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IGEM/UP/1 Testing &amp; Purging Procedure Builder</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --primary: #005ea5;
+      --accent: #28a197;
+      --bg: #f5f7fa;
+      --text: #222;
+      --muted: #6b7280;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    header {
+      background: linear-gradient(120deg, var(--primary), var(--accent));
+      color: #fff;
+      padding: 2.5rem 1rem;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0 0 0.5rem;
+      font-size: clamp(2rem, 3vw + 1rem, 3rem);
+    }
+
+    header p {
+      max-width: 720px;
+      margin: 0 auto;
+      font-size: 1.05rem;
+    }
+
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      display: grid;
+      gap: 1.5rem;
+    }
+
+    section {
+      background: #fff;
+      padding: 1.75rem;
+      border-radius: 14px;
+      box-shadow: 0 18px 24px -22px rgba(0, 0, 0, 0.45);
+    }
+
+    section h2 {
+      margin-top: 0;
+      color: var(--primary);
+      font-size: 1.4rem;
+    }
+
+    .two-column {
+      display: grid;
+      gap: 1rem;
+    }
+
+    @media (min-width: 760px) {
+      .two-column {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+    }
+
+    input,
+    textarea,
+    select {
+      width: 100%;
+      padding: 0.65rem 0.75rem;
+      border-radius: 10px;
+      border: 1px solid #d4d8dd;
+      font-size: 1rem;
+      background: #fdfdfd;
+    }
+
+    textarea {
+      min-height: 110px;
+      resize: vertical;
+    }
+
+    .checklist {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .checklist li {
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+    }
+
+    .checklist input[type="checkbox"] {
+      margin-top: 0.35rem;
+      width: 1.15rem;
+      height: 1.15rem;
+    }
+
+    .download-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+    }
+
+    button {
+      padding: 0.75rem 1.25rem;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 600;
+      background: var(--primary);
+      color: #fff;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 18px -12px rgba(0, 0, 0, 0.6);
+    }
+
+    .note {
+      background: rgba(0, 94, 165, 0.08);
+      border-left: 4px solid var(--primary);
+      padding: 1rem;
+      border-radius: 0 12px 12px 0;
+      color: #0b1f3a;
+      margin-top: 1rem;
+    }
+
+    footer {
+      text-align: center;
+      padding: 2rem 1rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>IGEM/UP/1 Testing &amp; Purging Procedure Builder</h1>
+    <p>
+      Use this planning template to assemble a site-specific procedure for testing and purging natural gas
+      pipework in accordance with IGEM/UP/1. Complete each section, capture risk controls, and export the
+      finished document for review and approval.
+    </p>
+  </header>
+  <main>
+    <section id="project-details">
+      <h2>1. Project and Personnel Details</h2>
+      <div class="two-column">
+        <div>
+          <label for="project-name">Project / Site Name</label>
+          <input id="project-name" type="text" placeholder="e.g. ABC Manufacturing Plant" />
+        </div>
+        <div>
+          <label for="location">Location</label>
+          <input id="location" type="text" placeholder="Town / Postcode" />
+        </div>
+        <div>
+          <label for="client">Client / Duty Holder</label>
+          <input id="client" type="text" placeholder="Company or client representative" />
+        </div>
+        <div>
+          <label for="prepared-by">Prepared By</label>
+          <input id="prepared-by" type="text" placeholder="Engineer name &amp; role" />
+        </div>
+        <div>
+          <label for="date">Procedure Date</label>
+          <input id="date" type="date" />
+        </div>
+        <div>
+          <label for="gas-type">Gas Type</label>
+          <select id="gas-type">
+            <option value="natural">Natural Gas</option>
+            <option value="lpg">LPG (Propane)</option>
+            <option value="biomethane">Biomethane</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <section id="system-overview">
+      <h2>2. Pipework Overview</h2>
+      <div class="two-column">
+        <div>
+          <label for="pipework-description">System Description</label>
+          <textarea id="pipework-description" placeholder="Summarise pipe routes, sizes, materials and connected appliances"></textarea>
+        </div>
+        <div>
+          <label for="drawing-reference">Drawings / References</label>
+          <textarea id="drawing-reference" placeholder="Isometric drawings, schematics, IGEM references"></textarea>
+        </div>
+        <div>
+          <label for="operating-pressure">Operating Pressure (mbar)</label>
+          <input id="operating-pressure" type="number" min="0" step="0.1" />
+        </div>
+        <div>
+          <label for="volume">Estimated System Volume (m³)</label>
+          <input id="volume" type="number" min="0" step="0.01" />
+        </div>
+      </div>
+    </section>
+
+    <section id="testing-plan">
+      <h2>3. Strength &amp; Tightness Testing Plan</h2>
+      <div class="two-column">
+        <div>
+          <label for="test-standard">Test Standard / Clause</label>
+          <input id="test-standard" type="text" placeholder="e.g. IGEM/UP/1 6.2" />
+        </div>
+        <div>
+          <label for="test-medium">Test Medium</label>
+          <input id="test-medium" type="text" placeholder="e.g. Air, Nitrogen" />
+        </div>
+        <div>
+          <label for="test-pressure">Test Pressure</label>
+          <input id="test-pressure" type="text" placeholder="kPa or bar" />
+        </div>
+        <div>
+          <label for="test-duration">Test Duration</label>
+          <input id="test-duration" type="text" placeholder="minutes" />
+        </div>
+      </div>
+      <label for="test-procedure">Detailed Procedure</label>
+      <textarea id="test-procedure" placeholder="List steps including isolation, test instrument calibration, stabilisation time and acceptance criteria."></textarea>
+      <div class="note">
+        <strong>Reminder:</strong> Document instrument calibration dates and verify leak detection fluid compatibility with pipe materials.
+      </div>
+    </section>
+
+    <section id="purging-plan">
+      <h2>4. Purging Plan</h2>
+      <div class="two-column">
+        <div>
+          <label for="purge-method">Purging Method</label>
+          <select id="purge-method">
+            <option value="direct">Direct Purging (IGEM/UP/1 Section 7)</option>
+            <option value="indirect">Indirect Purging</option>
+            <option value="vacuum">Vacuum Purging</option>
+          </select>
+        </div>
+        <div>
+          <label for="purge-medium">Purge Medium</label>
+          <input id="purge-medium" type="text" placeholder="e.g. Nitrogen" />
+        </div>
+      </div>
+      <label for="purge-calculations">Purge Volume Calculations</label>
+      <textarea id="purge-calculations" placeholder="Include pipe volume, purge factor, flow rate and total purge time."></textarea>
+      <label for="purge-steps">Step-by-Step Instructions</label>
+      <textarea id="purge-steps" placeholder="Pre-purge checks, purge sequence, confirmation of gas-free atmosphere, recommissioning."></textarea>
+    </section>
+
+    <section id="risk-assessment">
+      <h2>5. Risk Controls &amp; Permits</h2>
+      <ul class="checklist">
+        <li>
+          <input id="permit" type="checkbox" />
+          <label for="permit">Permit-to-work / authorisation in place</label>
+        </li>
+        <li>
+          <input id="competence" type="checkbox" />
+          <label for="competence">Competent personnel appointed and briefed</label>
+        </li>
+        <li>
+          <input id="monitoring" type="checkbox" />
+          <label for="monitoring">Continuous atmosphere monitoring arranged</label>
+        </li>
+        <li>
+          <input id="ventilation" type="checkbox" />
+          <label for="ventilation">Ventilation routes confirmed and ignition sources controlled</label>
+        </li>
+        <li>
+          <input id="ppe" type="checkbox" />
+          <label for="ppe">PPE requirements communicated</label>
+        </li>
+      </ul>
+      <label for="additional-controls">Additional Risk Controls</label>
+      <textarea id="additional-controls" placeholder="Gas detection, fire cover, emergency arrangements, communication plan"></textarea>
+    </section>
+
+    <section id="acceptance">
+      <h2>6. Acceptance Criteria &amp; Sign-off</h2>
+      <div class="two-column">
+        <div>
+          <label for="acceptance-criteria">Acceptance Criteria</label>
+          <textarea id="acceptance-criteria" placeholder="Pressure loss limits, test medium purity, purge endpoint readings"></textarea>
+        </div>
+        <div>
+          <label for="signoff">Sign-off Requirements</label>
+          <textarea id="signoff" placeholder="Engineer signature, witness, client representative, record retention"></textarea>
+        </div>
+      </div>
+      <div class="note">
+        Store the final signed procedure within project QA documentation and retain for traceability in accordance with IGEM/UP/1 clause 10.
+      </div>
+    </section>
+
+    <section id="summary">
+      <h2>7. Procedure Output</h2>
+      <label for="summary-notes">Summary Notes</label>
+      <textarea id="summary-notes" placeholder="Capture key outcomes, deviations from standards, or special considerations"></textarea>
+      <div class="download-controls">
+        <button type="button" onclick="window.print()">Print / Save as PDF</button>
+        <button type="button" onclick="exportProcedure()">Download JSON</button>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    © <span id="year"></span> Testing &amp; Purging Procedure Template · Aligns with IGEM/UP/1 good practice.
+  </footer>
+
+  <script>
+    const inputs = document.querySelectorAll(
+      'input[type="text"], input[type="number"], input[type="date"], textarea, select, input[type="checkbox"]'
+    );
+
+    function loadState() {
+      const saved = localStorage.getItem('igem-up1-procedure');
+      if (!saved) return;
+      try {
+        const data = JSON.parse(saved);
+        inputs.forEach((input) => {
+          if (input.type === 'checkbox') {
+            input.checked = Boolean(data[input.id]);
+          } else if (data[input.id] !== undefined) {
+            input.value = data[input.id];
+          }
+        });
+      } catch (error) {
+        console.error('Could not load saved state', error);
+      }
+    }
+
+    function saveState() {
+      const data = {};
+      inputs.forEach((input) => {
+        if (!input.id) return;
+        if (input.type === 'checkbox') {
+          data[input.id] = input.checked;
+        } else {
+          data[input.id] = input.value;
+        }
+      });
+      localStorage.setItem('igem-up1-procedure', JSON.stringify(data));
+    }
+
+    function exportProcedure() {
+      const data = {};
+      inputs.forEach((input) => {
+        if (!input.id) return;
+        if (input.type === 'checkbox') {
+          data[input.id] = input.checked;
+        } else {
+          data[input.id] = input.value;
+        }
+      });
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'igem-up1-procedure.json';
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    inputs.forEach((input) => {
+      input.addEventListener('input', saveState);
+      if (input.type === 'checkbox') {
+        input.addEventListener('change', saveState);
+      }
+    });
+
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    loadState();
+  </script>
+</body>
+</html>
