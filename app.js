@@ -1,14 +1,17 @@
 import {
   PIPE_MAP,
-  METER_MAP,
   HOSE_MAP,
+  DIAPHRAGM_METERS,
+  ROTARY_METERS,
   computeTotals,
   DEFAULT_PURGE_MULTIPLIER,
+  GAS_SIZING_DATA_VERSION,
   pipeInstallVolume,
   pipePurgeVolume
-} from './gasSizingData.js';
+} from './gasSizing.js';
 
 const STORAGE_KEY = 'igem-up1-procedure';
+const APP_VERSION = '1.1.0';
 const INPUT_SELECTOR =
   'input[type="text"], input[type="number"], input[type="date"], input[type="hidden"], textarea, select, input[type="checkbox"]';
 
@@ -26,6 +29,18 @@ const inputs = Array.from(document.querySelectorAll(INPUT_SELECTOR));
 
 const dispatchDataUpdated = () => {
   document.dispatchEvent(new Event('procedure-data-updated'));
+};
+
+const setVersionInfo = () => {
+  const appVersion = document.getElementById('app-version');
+  if (appVersion) {
+    appVersion.textContent = APP_VERSION;
+  }
+
+  const dataVersion = document.getElementById('data-version');
+  if (dataVersion) {
+    dataVersion.textContent = GAS_SIZING_DATA_VERSION;
+  }
 };
 
 const applyInputData = (data = {}) => {
@@ -54,6 +69,15 @@ const serialiseFormData = () => {
   });
   return data;
 };
+
+const buildExportPayload = () => ({
+  ...serialiseFormData(),
+  __metadata: {
+    appVersion: APP_VERSION,
+    gasSizingDataVersion: GAS_SIZING_DATA_VERSION,
+    exportedAt: new Date().toISOString()
+  }
+});
 
 const loadState = () => {
   try {
@@ -101,7 +125,8 @@ const normaliseLength = (value) => {
 function initialisePipeCalculator() {
   const pipeRowsBody = document.getElementById('pipe-rows');
   const addPipeButton = document.getElementById('add-pipe-row');
-  const meterSelect = document.getElementById('meter-select');
+  const diaphragmSelect = document.getElementById('diaphragm-meter-select');
+  const rotarySelect = document.getElementById('rotary-meter-select');
   const hoseSelect = document.getElementById('purge-hose-size');
   const purgeMultiplierInput = document.getElementById('purge-multiplier');
   const summary = document.getElementById('pipe-volume-summary');
@@ -112,7 +137,8 @@ function initialisePipeCalculator() {
   if (
     !pipeRowsBody ||
     !addPipeButton ||
-    !meterSelect ||
+    !diaphragmSelect ||
+    !rotarySelect ||
     !hoseSelect ||
     !purgeMultiplierInput ||
     !summary ||
@@ -124,28 +150,33 @@ function initialisePipeCalculator() {
   }
 
   const pipeOptions = Object.keys(PIPE_MAP);
-  const meterOptions = Object.keys(METER_MAP).sort((a, b) => {
-    const aIsNoMeter = a.toLowerCase() === 'no meter';
-    const bIsNoMeter = b.toLowerCase() === 'no meter';
-    if (aIsNoMeter && !bIsNoMeter) return -1;
-    if (!aIsNoMeter && bIsNoMeter) return 1;
-    return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
-  });
+  const sortMeterNames = (names) =>
+    names
+      .slice()
+      .sort((a, b) => {
+        const aIsNoMeter = a.toLowerCase() === 'no meter';
+        const bIsNoMeter = b.toLowerCase() === 'no meter';
+        if (aIsNoMeter && !bIsNoMeter) return -1;
+        if (!aIsNoMeter && bIsNoMeter) return 1;
+        return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+      });
+  const formatMeterLabel = (value) => (value.toLowerCase() === 'no meter' ? 'No Meter' : value.toUpperCase());
+  const diaphragmMeterOptions = sortMeterNames(DIAPHRAGM_METERS.map((entry) => entry.meter));
+  const rotaryMeterOptions = sortMeterNames(ROTARY_METERS.map((entry) => entry.meter));
   const hoseOptions = Object.keys(HOSE_MAP)
     .filter((size) => Number.isFinite(HOSE_MAP[size]))
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
 
-  meterSelect.innerHTML = meterOptions
-    .map((meter) => {
-      const label = meter.toLowerCase() === 'no meter' ? 'No Meter' : meter.toUpperCase();
-      return `<option value="${meter}">${label}</option>`;
-    })
-    .join('');
+  const populateMeterSelect = (select, options) => {
+    select.innerHTML = options.map((meter) => `<option value="${meter}">${formatMeterLabel(meter)}</option>`).join('');
+    if (!select.value) {
+      const defaultMeter = options.find((option) => option.toLowerCase() === 'no meter') ?? options[0] ?? '';
+      select.value = defaultMeter;
+    }
+  };
 
-  if (!meterSelect.value) {
-    const defaultMeter = meterOptions.find((item) => item.toLowerCase() === 'no meter') ?? meterOptions[0] ?? '';
-    meterSelect.value = defaultMeter;
-  }
+  populateMeterSelect(diaphragmSelect, diaphragmMeterOptions);
+  populateMeterSelect(rotarySelect, rotaryMeterOptions);
 
   hoseSelect.innerHTML = [
     '<option value="">No purge hose</option>',
@@ -198,6 +229,17 @@ function initialisePipeCalculator() {
     return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_PURGE_MULTIPLIER;
   };
 
+  const createReadonlyInput = () => {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.readOnly = true;
+    input.tabIndex = -1;
+    input.className = 'numeric-readonly';
+    input.setAttribute('aria-live', 'off');
+    input.setAttribute('aria-label', 'Calculated value');
+    return input;
+  };
+
   const updateAllRowVolumes = (multiplierOverride) => {
     rowElements.forEach((row) => row.updateVolumes(multiplierOverride));
   };
@@ -245,10 +287,23 @@ function initialisePipeCalculator() {
       });
       lengthCell.appendChild(lengthInput);
 
+      const volumeCell = document.createElement('td');
+      volumeCell.classList.add('numeric');
+      const volumeInput = createReadonlyInput();
+      volumeInput.setAttribute('aria-label', 'Pipe volume per metre');
+      volumeCell.appendChild(volumeInput);
+
       const installCell = document.createElement('td');
       installCell.classList.add('numeric');
+      const installInput = createReadonlyInput();
+      installInput.setAttribute('aria-label', 'Installation volume for this pipe segment');
+      installCell.appendChild(installInput);
+
       const purgeCell = document.createElement('td');
       purgeCell.classList.add('numeric');
+      const purgeInput = createReadonlyInput();
+      purgeInput.setAttribute('aria-label', 'Purge volume for this pipe segment');
+      purgeCell.appendChild(purgeInput);
 
       const actionsCell = document.createElement('td');
       const removeButton = document.createElement('button');
@@ -277,12 +332,14 @@ function initialisePipeCalculator() {
         } catch (error) {
           console.error('Pipe segment calculation failed', error);
         }
-        installCell.textContent = formatVolume(installVolume);
-        purgeCell.textContent = formatVolume(purgeVolume);
+        volumeInput.value = formatVolume(PIPE_MAP[pipeSegments[index].dn]);
+        installInput.value = formatVolume(installVolume);
+        purgeInput.value = formatVolume(purgeVolume);
       };
 
       row.appendChild(dnCell);
       row.appendChild(lengthCell);
+      row.appendChild(volumeCell);
       row.appendChild(installCell);
       row.appendChild(purgeCell);
       row.appendChild(actionsCell);
@@ -296,13 +353,15 @@ function initialisePipeCalculator() {
   const updateSummary = () => {
     const multiplierValid = isMultiplierValid();
     const multiplier = getPurgeMultiplier();
-    const meterSelection = meterSelect.value;
-    const hasMeter = Boolean(
-      meterSelection &&
-        meterSelection.toLowerCase() !== 'no meter' &&
-        Object.prototype.hasOwnProperty.call(METER_MAP, meterSelection)
-    );
-    const meterKey = hasMeter ? meterSelection : null;
+    const diaphragmSelection = diaphragmSelect.value;
+    const diaphragmEntry = DIAPHRAGM_METERS.find((entry) => entry.meter === diaphragmSelection);
+    const hasDiaphragm = Boolean(diaphragmEntry && diaphragmEntry.meter.toLowerCase() !== 'no meter');
+    const diaphragmKey = hasDiaphragm ? diaphragmSelection : null;
+
+    const rotarySelection = rotarySelect.value;
+    const rotaryEntry = ROTARY_METERS.find((entry) => entry.meter === rotarySelection);
+    const hasRotary = Boolean(rotaryEntry && rotaryEntry.meter.toLowerCase() !== 'no meter');
+    const rotaryKey = hasRotary ? rotarySelection : null;
     const hoseSelection = hoseSelect.value;
     const hasHose = Boolean(hoseSelection && Number.isFinite(HOSE_MAP[hoseSelection]));
     const hoseKey = hasHose ? hoseSelection : null;
@@ -315,7 +374,8 @@ function initialisePipeCalculator() {
       const pipesForTotals = getSegmentsForTotals();
       const totals = computeTotals({
         pipes: pipesForTotals,
-        meterName: meterKey,
+        diaphragmMeter: diaphragmKey,
+        rotaryMeter: rotaryKey,
         purgeHoseSize: hoseKey,
         purgeMultiplier: multiplier
       });
@@ -326,11 +386,18 @@ function initialisePipeCalculator() {
       const multiplierSentence = multiplierValid
         ? `Pipe purge uses ${formatNumber(multiplier, 2)} × the installed pipe volume as per IGEM/UP/1 Sheet 1.`
         : `Default ${formatNumber(DEFAULT_PURGE_MULTIPLIER, 2)} × pipe purge factor applied because the override is empty or invalid.`;
-      const meterSentence = hasMeter
-        ? `Meter ${meterSelection.toUpperCase()} contributes ${formatVolume(breakdown.meterInstall_m3)} m³ (install) and ${formatVolume(
-            breakdown.meterPurge_m3
-          )} m³ (purge) using Table 3 values.`
-        : 'No meter selected, so only pipework volumes are included.';
+      const meterNarrative = [
+        hasDiaphragm
+          ? `Diaphragm meter ${diaphragmSelection.toUpperCase()} contributes ${formatVolume(
+              breakdown.diaphragmInstall_m3
+            )} m³ (install) and ${formatVolume(breakdown.diaphragmPurge_m3)} m³ (purge) using Table 3 values.`
+          : 'No diaphragm meter selected, so no diaphragm allowance is included.',
+        hasRotary
+          ? `Rotary meter ${rotarySelection.toUpperCase()} contributes ${formatVolume(breakdown.rotaryInstall_m3)} m³ (install) and ${formatVolume(
+              breakdown.rotaryPurge_m3
+            )} m³ (purge) using Table 3 values.`
+          : 'No rotary meter selected, so no rotary allowance is included.'
+      ].join(' ');
       const hoseSentence = hasHose
         ? `${hoseSelection} purge hose allowance adds ${formatVolume(breakdown.purgeHose_m3)} m³ from Table 4.`
         : 'No purge hose allowance applied.';
@@ -338,19 +405,25 @@ function initialisePipeCalculator() {
       summary.innerHTML = `
         <p><strong>Total installation volume:</strong> ${formatVolume(totals.installVolume_m3)} m³ (pipes ${formatVolume(
           breakdown.pipeInstall_m3
-        )} m³ + meter ${formatVolume(breakdown.meterInstall_m3)} m³).</p>
+        )} m³ + diaphragm ${formatVolume(breakdown.diaphragmInstall_m3)} m³ + rotary ${formatVolume(
+          breakdown.rotaryInstall_m3
+        )} m³).</p>
         <p><strong>Total purge volume:</strong> ${formatVolume(totals.purgeVolume_m3)} m³ (pipes ${formatVolume(
           breakdown.pipePurge_m3
-        )} m³ + meter ${formatVolume(breakdown.meterPurge_m3)} m³ + hose ${formatVolume(breakdown.purgeHose_m3)} m³).</p>
+        )} m³ + diaphragm ${formatVolume(breakdown.diaphragmPurge_m3)} m³ + rotary ${formatVolume(
+          breakdown.rotaryPurge_m3
+        )} m³ + hose ${formatVolume(breakdown.purgeHose_m3)} m³).</p>
         <p>${multiplierSentence}</p>
-        <p>${meterSentence} ${hoseSentence}</p>
+        <p>${meterNarrative} ${hoseSentence}</p>
       `;
 
       const breakdownRows = [
         ['Pipe installation (Table 4)', formatVolume(breakdown.pipeInstall_m3)],
         ['Pipe purge (factor × install)', formatVolume(breakdown.pipePurge_m3)],
-        ['Meter installation (Table 3)', formatVolume(breakdown.meterInstall_m3)],
-        ['Meter purge (Table 3)', formatVolume(breakdown.meterPurge_m3)],
+        ['Diaphragm installation (Table 3)', formatVolume(breakdown.diaphragmInstall_m3)],
+        ['Diaphragm purge (Table 3)', formatVolume(breakdown.diaphragmPurge_m3)],
+        ['Rotary installation (Table 3)', formatVolume(breakdown.rotaryInstall_m3)],
+        ['Rotary purge (Table 3)', formatVolume(breakdown.rotaryPurge_m3)],
         ['Purge hose allowance', formatVolume(breakdown.purgeHose_m3)],
         ['Total installation', formatVolume(totals.installVolume_m3)],
         ['Total purge', formatVolume(totals.purgeVolume_m3)]
@@ -428,7 +501,11 @@ function initialisePipeCalculator() {
     updateSummary();
   });
 
-  meterSelect.addEventListener('change', () => {
+  diaphragmSelect.addEventListener('change', () => {
+    updateSummary();
+  });
+
+  rotarySelect.addEventListener('change', () => {
     updateSummary();
   });
 
@@ -599,11 +676,12 @@ function calculateTestPlan() {
 }
 
 const exportProcedure = () => {
-  const blob = new Blob([JSON.stringify(serialiseFormData(), null, 2)], { type: 'application/json' });
+  const payload = buildExportPayload();
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = 'igem-up1-procedure.json';
+  link.download = `igem-up1-procedure-v${APP_VERSION}.json`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -614,7 +692,11 @@ const handleImportData = (objectData) => {
   if (!objectData || typeof objectData !== 'object') {
     throw new Error('The provided JSON does not contain form data.');
   }
-  applyInputData(objectData);
+  const { __metadata: metadata, ...formData } = objectData;
+  if (metadata && typeof metadata === 'object') {
+    console.info('Imported procedure metadata', metadata);
+  }
+  applyInputData(formData);
   saveState();
   calculateTestPlan();
 };
@@ -792,6 +874,7 @@ if (queryMode === 'new') {
   setTimeout(() => importInput.click(), 150);
 }
 
+setVersionInfo();
 initialisePipeCalculator();
 loadState();
 calculateTestPlan();

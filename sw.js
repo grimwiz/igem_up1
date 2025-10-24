@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v4';
 const CACHE_NAME = `igem-up1-cache-${CACHE_VERSION}`;
 const ASSET_PREFIX = self.location.pathname.replace(/[^/]*$/, '');
 const resolveAsset = (path) => new URL(path, self.location.origin + ASSET_PREFIX).toString();
@@ -8,6 +8,7 @@ const PRECACHE_ASSETS = [
   './index.html',
   './styles.css',
   './app.js',
+  './gasSizing.js',
   './manifest.webmanifest',
 ].map(resolveAsset);
 

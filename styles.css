@@ -302,6 +302,33 @@ details summary {
   text-decoration: underline;
 }
 
+.version-info {
+  margin-top: 1.5rem;
+  padding: 1rem 1.2rem;
+  border-radius: 12px;
+  background: rgba(0, 94, 165, 0.06);
+  border: 1px solid rgba(0, 94, 165, 0.18);
+}
+
+.version-info h3 {
+  margin-top: 0;
+  margin-bottom: 0.35rem;
+  color: var(--primary);
+}
+
+.version-info p {
+  margin: 0.35rem 0 0;
+}
+
+.version-info strong {
+  color: var(--primary);
+}
+
+.version-info .version-note {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
 .pipe-table-wrapper {
   overflow-x: auto;
   margin-top: 1rem;
@@ -310,7 +337,7 @@ details summary {
 .pipe-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 520px;
+  min-width: 620px;
 }
 
 .pipe-table th,
@@ -325,6 +352,22 @@ details summary {
   text-align: right;
 }
 
+.pipe-table input.numeric-readonly {
+  width: 100%;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 6px;
+  padding: 0.35rem 0.5rem;
+  text-align: right;
+  background: #f9fafb;
+  font: inherit;
+  color: inherit;
+}
+
+.pipe-table input.numeric-readonly:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0, 94, 165, 0.25);
+}
+
 .pipe-breakdown-table {
   margin-top: 1rem;
 }
@@ -337,7 +380,7 @@ details summary {
 
 @media (min-width: 760px) {
   .pipe-inputs {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 

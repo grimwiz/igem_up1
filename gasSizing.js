@@ -1,14 +1,36 @@
 // Auto-generated from UP1.xlsx — contains all lookup data and helper algorithms.
 
-export const METERS = [
+export const GAS_SIZING_DATA_VERSION = '2024-06-01';
+
+export const DIAPHRAGM_METERS = [
   { meter: 'U6', installVolume_m3: 0.008, purgeVolume_m3: 0.002 },
-  { meter: 'u16', installVolume_m3: 0.025, purgeVolume_m3: 0.006 },
+  { meter: 'U16', installVolume_m3: 0.025, purgeVolume_m3: 0.006 },
   { meter: 'U25', installVolume_m3: 0.037, purgeVolume_m3: 0.01 },
   { meter: 'U40', installVolume_m3: 0.067, purgeVolume_m3: 0.02 },
   { meter: 'U65', installVolume_m3: 0.1, purgeVolume_m3: 0.025 },
   { meter: 'U100', installVolume_m3: 0.182, purgeVolume_m3: 0.057 },
   { meter: 'U160', installVolume_m3: 0.304, purgeVolume_m3: 0.071 },
+  { meter: 'U250', installVolume_m3: 0.471, purgeVolume_m3: 0.111 },
+  { meter: 'U400', installVolume_m3: 0.752, purgeVolume_m3: 0.178 },
+  { meter: 'No Meter', installVolume_m3: 0.0, purgeVolume_m3: 0.0 }
+];
+
+export const ROTARY_METERS = [
   { meter: 'No Meter', installVolume_m3: 0.0, purgeVolume_m3: 0.0 },
+  { meter: 'DN32', installVolume_m3: 0.004, purgeVolume_m3: 0.001 },
+  { meter: 'DN40', installVolume_m3: 0.006, purgeVolume_m3: 0.0015 },
+  { meter: 'DN50', installVolume_m3: 0.009, purgeVolume_m3: 0.0023 },
+  { meter: 'DN65', installVolume_m3: 0.014, purgeVolume_m3: 0.0035 },
+  { meter: 'DN80', installVolume_m3: 0.021, purgeVolume_m3: 0.0053 },
+  { meter: 'DN100', installVolume_m3: 0.032, purgeVolume_m3: 0.008 },
+  { meter: 'DN150', installVolume_m3: 0.06, purgeVolume_m3: 0.015 },
+  { meter: 'DN200', installVolume_m3: 0.1, purgeVolume_m3: 0.025 },
+  { meter: 'DN250', installVolume_m3: 0.15, purgeVolume_m3: 0.038 },
+  { meter: 'DN300', installVolume_m3: 0.21, purgeVolume_m3: 0.053 },
+  { meter: 'DN350', installVolume_m3: 0.27, purgeVolume_m3: 0.068 },
+  { meter: 'DN400', installVolume_m3: 0.34, purgeVolume_m3: 0.085 },
+  { meter: 'DN450', installVolume_m3: 0.42, purgeVolume_m3: 0.105 },
+  { meter: 'DN500', installVolume_m3: 0.5, purgeVolume_m3: 0.125 }
 ];
 
 export const PIPES = [
@@ -35,7 +57,7 @@ export const PIPES = [
   { dn: '35mm Cu', volumePerMeter_m3: 0.00084 },
   { dn: '42mm Cu', volumePerMeter_m3: 0.0012 },
   { dn: '54mm Cu', volumePerMeter_m3: 0.0021 },
-  { dn: '67mm CU', volumePerMeter_m3: 0.0033 },
+  { dn: '67mm CU', volumePerMeter_m3: 0.0033 }
 ];
 
 export const PURGE_HOSE = [
@@ -54,7 +76,7 @@ export const PURGE_HOSE = [
   { size: '60', hoseVolume_m3: NaN },
   { size: '65mm', hoseVolume_m3: 0.0038 },
   { size: '80mm', hoseVolume_m3: 0.0054 },
-  { size: 'TTD Max', hoseVolume_m3: NaN },
+  { size: 'TTD Max', hoseVolume_m3: NaN }
 ];
 
 export const TABLE12 = [
@@ -75,7 +97,7 @@ export const TABLE12 = [
   { dn: 'DN600', f1: 1.2, f2: 21.0, f3: 1230.0, f4: NaN },
   { dn: 'DN750', f1: 1.5, f2: 40.0, f3: 2390.0, f4: NaN },
   { dn: 'DN900', f1: 1.5, f2: 57.0, f3: 3440.0, f4: NaN },
-  { dn: 'DN1200', f1: 1.7, f2: 116.0, f3: 6960.0, f4: NaN },
+  { dn: 'DN1200', f1: 1.7, f2: 116.0, f3: 6960.0, f4: NaN }
 ];
 
 export const GAS_FACTORS_F1 = [
@@ -84,7 +106,7 @@ export const GAS_FACTORS_F1 = [
   { gas: 'Butane', F1_gas: 128.0, F1_n2: 305.0 },
   { gas: 'Lpg/Air (Sng)', F1_gas: 45.0, F1_n2: 60.0 },
   { gas: 'Lpg/Air (Smg)', F1_gas: 28.0, F1_n2: 33.0 },
-  { gas: 'Coal Gas', F1_gas: 20.0, F1_n2: 31.0 },
+  { gas: 'Coal Gas', F1_gas: 20.0, F1_n2: 31.0 }
 ];
 
 export const OPERATING_FACTORS_F3 = [
@@ -93,23 +115,20 @@ export const OPERATING_FACTORS_F3 = [
   { gas: 'Butane', F3_gas: 0.059, F3_n2: 0.134 },
   { gas: 'Lpg/Air (Sng)', F3_gas: 0.059, F3_n2: 0.078 },
   { gas: 'Lpg/Air (Smg)', F3_gas: 0.059, F3_n2: 0.069 },
-  { gas: 'Coal Gas', F3_gas: 0.059, F3_n2: 0.09 },
+  { gas: 'Coal Gas', F3_gas: 0.059, F3_n2: 0.09 }
 ];
 
+const mapFromMeters = (meters) =>
+  Object.fromEntries(meters.map((m) => [m.meter, { install: m.installVolume_m3, purge: m.purgeVolume_m3 }]));
 
 // Convenience maps (by key)
-export const PIPE_MAP = Object.fromEntries(PIPES.map(p => [p.dn, p.volumePerMeter_m3]));
-export const METER_MAP = Object.fromEntries(METERS.map(m => [m.meter, {install: m.installVolume_m3, purge: m.purgeVolume_m3}]));
-export const HOSE_MAP = Object.fromEntries(PURGE_HOSE.map(h => [h.size, h.hoseVolume_m3]));
-export const F1_MAP = Object.fromEntries(GAS_FACTORS_F1.map(g => [g.gas.toLowerCase(), {gas: g.F1_gas, n2: g.F1_n2}]));
-export const F3_MAP = Object.fromEntries(OPERATING_FACTORS_F3.map(g => [g.gas.toLowerCase(), {gas: g.F3_gas, n2: g.F3_n2}]));
-export const TABLE12_MAP = Object.fromEntries(TABLE12.map(e => [e.dn, {f1: e.f1, f2: e.f2, f3: e.f3, f4: e.f4}]));
-
-
-// === Algorithms inferred from Sheet1 ===
-// Units: lengths in meters (m), volumes in cubic meters (m^3).
-// Purge multiplier observed on Sheet1 is 1.5 (Purge = 1.5 * Installation).
-// Meter purge volumes come from Table 3 explicitly and should take precedence.
+export const PIPE_MAP = Object.fromEntries(PIPES.map((p) => [p.dn, p.volumePerMeter_m3]));
+export const DIAPHRAGM_METER_MAP = mapFromMeters(DIAPHRAGM_METERS);
+export const ROTARY_METER_MAP = mapFromMeters(ROTARY_METERS);
+export const HOSE_MAP = Object.fromEntries(PURGE_HOSE.map((h) => [h.size, h.hoseVolume_m3]));
+export const F1_MAP = Object.fromEntries(GAS_FACTORS_F1.map((g) => [g.gas.toLowerCase(), { gas: g.F1_gas, n2: g.F1_n2 }]));
+export const F3_MAP = Object.fromEntries(OPERATING_FACTORS_F3.map((g) => [g.gas.toLowerCase(), { gas: g.F3_gas, n2: g.F3_n2 }]));
+export const TABLE12_MAP = Object.fromEntries(TABLE12.map((e) => [e.dn, { f1: e.f1, f2: e.f2, f3: e.f3, f4: e.f4 }]));
 
 export const DEFAULT_PURGE_MULTIPLIER = 1.5;
 
@@ -124,49 +143,49 @@ export function pipePurgeVolume(dn, length_m, purgeMultiplier = DEFAULT_PURGE_MU
   return pipeInstallVolume(dn, length_m) * purgeMultiplier;
 }
 
-export function meterInstallVolume(meterName) {
-  const m = METER_MAP[meterName];
-  if (!m) throw new Error(`Unknown meter: ${meterName}`);
-  return m.install;
-}
-
-export function meterPurgeVolume(meterName) {
-  const m = METER_MAP[meterName];
-  if (!m) throw new Error(`Unknown meter: ${meterName}`);
-  // Prefer explicit purge volume from Table 3; fall back to multiplier if zero.
-  return (m.purge && m.purge > 0) ? m.purge : m.install * DEFAULT_PURGE_MULTIPLIER;
-}
+const getMeterVolumes = (map, meterName) => {
+  if (!meterName || meterName.toLowerCase() === 'no meter') {
+    return { install: 0, purge: 0 };
+  }
+  const entry = map[meterName];
+  if (!entry) throw new Error(`Unknown meter: ${meterName}`);
+  const purge = entry.purge && entry.purge > 0 ? entry.purge : entry.install * DEFAULT_PURGE_MULTIPLIER;
+  return { install: entry.install, purge };
+};
 
 /**
  * Compute totals for an installation.
  * @param {Array<{dn:string, length_m:number}>} pipes - list of pipe segments.
- * @param {string|null} meterName - selected meter (or "No Meter"/null).
+ * @param {string|null} diaphragmMeter - selected diaphragm meter.
+ * @param {string|null} rotaryMeter - selected rotary meter.
  * @param {string|null} purgeHoseSize - optional purge hose size to include.
  * @param {number} purgeMultiplier - optional override for pipe purge multiplier.
  */
-export function computeTotals({pipes = [], meterName = null, purgeHoseSize = null, purgeMultiplier = DEFAULT_PURGE_MULTIPLIER} = {}) {
-  // Sum pipes
+export function computeTotals({
+  pipes = [],
+  diaphragmMeter = null,
+  rotaryMeter = null,
+  purgeHoseSize = null,
+  purgeMultiplier = DEFAULT_PURGE_MULTIPLIER
+} = {}) {
   const pipeInstall = pipes.reduce((sum, seg) => sum + pipeInstallVolume(seg.dn, seg.length_m), 0);
   const pipePurge = pipes.reduce((sum, seg) => sum + pipePurgeVolume(seg.dn, seg.length_m, purgeMultiplier), 0);
 
-  // Meter volumes (optional)
-  let meterInstall = 0, meterPurge = 0;
-  if (meterName && meterName.toLowerCase() !== "no meter") {
-    meterInstall = meterInstallVolume(meterName);
-    meterPurge   = meterPurgeVolume(meterName);
-  }
+  const diaphragmVolumes = getMeterVolumes(DIAPHRAGM_METER_MAP, diaphragmMeter);
+  const rotaryVolumes = getMeterVolumes(ROTARY_METER_MAP, rotaryMeter);
 
-  // Purge hose (optional flat volume added)
-  const hoseVol = purgeHoseSize ? (HOSE_MAP[purgeHoseSize] ?? 0) : 0;
+  const hoseVol = purgeHoseSize ? HOSE_MAP[purgeHoseSize] ?? 0 : 0;
 
   return {
-    installVolume_m3: pipeInstall + meterInstall,
-    purgeVolume_m3: pipePurge + meterPurge + hoseVol,
+    installVolume_m3: pipeInstall + diaphragmVolumes.install + rotaryVolumes.install,
+    purgeVolume_m3: pipePurge + diaphragmVolumes.purge + rotaryVolumes.purge + hoseVol,
     breakdown: {
       pipeInstall_m3: pipeInstall,
       pipePurge_m3: pipePurge,
-      meterInstall_m3: meterInstall,
-      meterPurge_m3: meterPurge,
+      diaphragmInstall_m3: diaphragmVolumes.install,
+      diaphragmPurge_m3: diaphragmVolumes.purge,
+      rotaryInstall_m3: rotaryVolumes.install,
+      rotaryPurge_m3: rotaryVolumes.purge,
       purgeHose_m3: hoseVol
     }
   };
