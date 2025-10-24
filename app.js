@@ -1,6 +1,5 @@
 import {
-  PIPE_MAP,
-  HOSE_MAP,
+  PIPE_SEGMENT_LIBRARY,
   DIAPHRAGM_METERS,
   ROTARY_METERS,
   TABLE6,
@@ -11,7 +10,10 @@ import {
   DEFAULT_PURGE_MULTIPLIER,
   GAS_SIZING_DATA_VERSION,
   pipeInstallVolume,
-  pipePurgeVolume
+  pipePurgeVolume,
+  getPipeSegment,
+  STANDARD_REFERENCE_TABLES,
+  DIAPHRAGM_PURGE_MULTIPLIER
 } from './gasSizing.js';
 
 const STORAGE_KEY = 'igem-up1-procedure';
@@ -135,12 +137,98 @@ const normaliseLength = (value) => {
   return Number.isFinite(numeric) && numeric >= 0 ? numeric : 0;
 };
 
+const formatReferenceValue = (value, key) => {
+  if (value === null || value === undefined) return '—';
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) return '—';
+    if (/volumePerMeter|Volume/.test(key)) {
+      return formatVolume(value);
+    }
+    if (/range|TTD/i.test(key)) {
+      return formatNumber(value, 0);
+    }
+    if (/F[13]_/.test(key)) {
+      return formatNumber(value, 3);
+    }
+    if (Number.isInteger(value)) {
+      return formatNumber(value, 0);
+    }
+    return formatNumber(value, Math.abs(value) < 10 ? 3 : 2);
+  }
+  if (key === 'category') {
+    if (value === 'pipe') return 'Pipework';
+    if (value === 'purge-hose') return 'Purge hose';
+  }
+  return String(value);
+};
+
+function renderReferenceTables() {
+  const container = document.getElementById('igem-reference-table-container');
+  if (!container) return;
+
+  const fragment = document.createDocumentFragment();
+
+  STANDARD_REFERENCE_TABLES.forEach((table) => {
+    const section = document.createElement('article');
+    section.className = 'reference-table';
+    section.id = table.id;
+
+    const heading = document.createElement('h3');
+    heading.textContent = table.title;
+    section.appendChild(heading);
+
+    if (table.summary) {
+      const summaryPara = document.createElement('p');
+      summaryPara.textContent = table.summary;
+      section.appendChild(summaryPara);
+    }
+
+    const tableElement = document.createElement('table');
+    tableElement.className = 'reference-data-table';
+
+    const thead = document.createElement('thead');
+    const headerRow = document.createElement('tr');
+    table.columns.forEach((column) => {
+      const th = document.createElement('th');
+      th.scope = 'col';
+      th.textContent = column.label;
+      headerRow.appendChild(th);
+    });
+    thead.appendChild(headerRow);
+    tableElement.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    table.rows.forEach((row) => {
+      const tr = document.createElement('tr');
+      table.columns.forEach((column) => {
+        const td = document.createElement('td');
+        const rawValue = row[column.key];
+        const displayValue = column.format
+          ? column.format(rawValue, row)
+          : formatReferenceValue(rawValue, column.key);
+        td.textContent = displayValue;
+        if (typeof rawValue === 'number' && Number.isFinite(rawValue)) {
+          td.classList.add('numeric');
+        }
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+    tableElement.appendChild(tbody);
+
+    section.appendChild(tableElement);
+    fragment.appendChild(section);
+  });
+
+  container.innerHTML = '';
+  container.appendChild(fragment);
+}
+
 function initialisePipeCalculator() {
   const pipeRowsBody = document.getElementById('pipe-rows');
   const addPipeButton = document.getElementById('add-pipe-row');
   const diaphragmSelect = document.getElementById('diaphragm-meter-select');
   const rotarySelect = document.getElementById('rotary-meter-select');
-  const hoseSelect = document.getElementById('purge-hose-size');
   const purgeMultiplierInput = document.getElementById('purge-multiplier');
   const summary = document.getElementById('pipe-volume-summary');
   const totalsBody = document.getElementById('pipe-volume-breakdown-body');
@@ -154,7 +242,6 @@ function initialisePipeCalculator() {
     !addPipeButton ||
     !diaphragmSelect ||
     !rotarySelect ||
-    !hoseSelect ||
     !purgeMultiplierInput ||
     !summary ||
     !totalsBody ||
@@ -164,8 +251,20 @@ function initialisePipeCalculator() {
   ) {
     return;
   }
-
-  const pipeOptions = Object.keys(PIPE_MAP);
+  const sortedSegments = PIPE_SEGMENT_LIBRARY.slice().sort((a, b) => {
+    if (a.category !== b.category) {
+      return a.category.localeCompare(b.category);
+    }
+    return a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: 'base' });
+  });
+  const pipeOptions = sortedSegments.map((entry) => entry.id);
+  const segmentOptionsByCategory = sortedSegments.reduce((acc, entry) => {
+    const list = acc[entry.category] ?? [];
+    list.push(entry);
+    acc[entry.category] = list;
+    return acc;
+  }, {});
+  const segmentCategories = Object.keys(segmentOptionsByCategory);
   const sortMeterNames = (names) =>
     names
       .slice()
@@ -179,10 +278,6 @@ function initialisePipeCalculator() {
   const formatMeterLabel = (value) => (value.toLowerCase() === 'no meter' ? 'No Meter' : value.toUpperCase());
   const diaphragmMeterOptions = sortMeterNames(DIAPHRAGM_METERS.map((entry) => entry.meter));
   const rotaryMeterOptions = sortMeterNames(ROTARY_METERS.map((entry) => entry.meter));
-  const hoseOptions = Object.keys(HOSE_MAP)
-    .filter((size) => Number.isFinite(HOSE_MAP[size]))
-    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
-
   const populateMeterSelect = (select, options) => {
     select.innerHTML = options.map((meter) => `<option value="${meter}">${formatMeterLabel(meter)}</option>`).join('');
     if (!select.value) {
@@ -193,15 +288,6 @@ function initialisePipeCalculator() {
 
   populateMeterSelect(diaphragmSelect, diaphragmMeterOptions);
   populateMeterSelect(rotarySelect, rotaryMeterOptions);
-
-  hoseSelect.innerHTML = [
-    '<option value="">No purge hose</option>',
-    ...hoseOptions.map((size) => `<option value="${size}">${size}</option>`)
-  ].join('');
-
-  if (!hoseSelect.value) {
-    hoseSelect.value = '';
-  }
 
   if (!purgeMultiplierInput.value) {
     purgeMultiplierInput.value = DEFAULT_PURGE_MULTIPLIER.toFixed(1);
@@ -273,11 +359,22 @@ function initialisePipeCalculator() {
 
       const dnCell = document.createElement('td');
       const dnSelect = document.createElement('select');
-      pipeOptions.forEach((option) => {
-        const opt = document.createElement('option');
-        opt.value = option;
-        opt.textContent = option;
-        dnSelect.appendChild(opt);
+      const categoryLabels = {
+        pipe: 'Pipework (Table 4)',
+        'purge-hose': 'Purge hoses (Table 4)'
+      };
+      segmentCategories.forEach((category) => {
+        const options = segmentOptionsByCategory[category];
+        if (!options || !options.length) return;
+        const optgroup = document.createElement('optgroup');
+        optgroup.label = categoryLabels[category] ?? category;
+        options.forEach((option) => {
+          const opt = document.createElement('option');
+          opt.value = option.id;
+          opt.textContent = option.label;
+          optgroup.appendChild(opt);
+        });
+        dnSelect.appendChild(optgroup);
       });
       dnSelect.value = segment.dn;
       dnSelect.addEventListener('change', () => {
@@ -348,7 +445,13 @@ function initialisePipeCalculator() {
         } catch (error) {
           console.error('Pipe segment calculation failed', error);
         }
-        volumeInput.value = formatVolume(PIPE_MAP[pipeSegments[index].dn]);
+        let volumePerMeter = Number.NaN;
+        try {
+          volumePerMeter = getPipeSegment(pipeSegments[index].dn).volumePerMeter_m3;
+        } catch (error) {
+          console.error('Unable to read pipe segment volume', error);
+        }
+        volumeInput.value = formatVolume(volumePerMeter);
         installInput.value = formatVolume(installVolume);
         purgeInput.value = formatVolume(purgeVolume);
       };
@@ -378,9 +481,6 @@ function initialisePipeCalculator() {
     const rotaryEntry = ROTARY_METERS.find((entry) => entry.meter === rotarySelection);
     const hasRotary = Boolean(rotaryEntry && rotaryEntry.meter.toLowerCase() !== 'no meter');
     const rotaryKey = hasRotary ? rotarySelection : null;
-    const hoseSelection = hoseSelect.value;
-    const hasHose = Boolean(hoseSelection && Number.isFinite(HOSE_MAP[hoseSelection]));
-    const hoseKey = hasHose ? hoseSelection : null;
     purgeMultiplierInput.setAttribute(
       'aria-invalid',
       !multiplierValid && purgeMultiplierInput.value !== '' ? 'true' : 'false'
@@ -392,15 +492,13 @@ function initialisePipeCalculator() {
         pipes: pipesForTotals,
         diaphragmMeter: diaphragmKey,
         rotaryMeter: rotaryKey,
-        purgeHoseSize: hoseKey,
         purgeMultiplier: multiplier
       });
       const breakdown = totals.breakdown;
       const systemVolumeBase =
         breakdown.pipeInstall_m3 +
         breakdown.diaphragmInstall_m3 +
-        breakdown.rotaryInstall_m3 +
-        (Number.isFinite(breakdown.purgeHose_m3) ? breakdown.purgeHose_m3 : 0);
+        breakdown.rotaryInstall_m3;
       const fittingsAllowance = totals.fittingsAllowance_m3 ?? systemVolumeBase * 0.1;
       const estimatedSystemVolume = totals.estimatedSystemVolume_m3 ?? systemVolumeBase + fittingsAllowance;
 
@@ -429,7 +527,12 @@ function initialisePipeCalculator() {
         hasDiaphragm
           ? `Diaphragm meter ${diaphragmSelection.toUpperCase()} contributes ${formatVolume(
               breakdown.diaphragmInstall_m3
-            )} m³ (install) and ${formatVolume(breakdown.diaphragmPurge_m3)} m³ (purge) using Table 3 values.`
+            )} m³ (install) and ${formatVolume(
+              breakdown.diaphragmPurge_m3
+            )} m³ (purge) using Table 3 installation data with a ${formatNumber(
+              DIAPHRAGM_PURGE_MULTIPLIER,
+              0
+            )} × purge allowance.`
           : 'No diaphragm meter selected, so no diaphragm allowance is included.',
         hasRotary
           ? `Rotary meter ${rotarySelection.toUpperCase()} contributes ${formatVolume(breakdown.rotaryInstall_m3)} m³ (install) and ${formatVolume(
@@ -437,10 +540,6 @@ function initialisePipeCalculator() {
             )} m³ (purge) using Table 3 values.`
           : 'No rotary meter selected, so no rotary allowance is included.'
       ].join(' ');
-      const hoseSentence = hasHose
-        ? `${hoseSelection} purge hose allowance adds ${formatVolume(breakdown.purgeHose_m3)} m³ from Table 4.`
-        : 'No purge hose allowance applied.';
-
       summary.innerHTML = `
         <p><strong>Total installation volume:</strong> ${formatVolume(totals.installVolume_m3)} m³ (pipes ${formatVolume(
           breakdown.pipeInstall_m3
@@ -451,25 +550,27 @@ function initialisePipeCalculator() {
           breakdown.pipePurge_m3
         )} m³ + diaphragm ${formatVolume(breakdown.diaphragmPurge_m3)} m³ + rotary ${formatVolume(
           breakdown.rotaryPurge_m3
-        )} m³ + hose ${formatVolume(breakdown.purgeHose_m3)} m³).</p>
+        )} m³).</p>
         <p><strong>Estimated system volume:</strong> ${formatVolume(estimatedSystemVolume)} m³ including ${formatVolume(
           fittingsAllowance
         )} m³ (10% fittings allowance).</p>
         <p>${multiplierSentence}</p>
-        <p>${meterNarrative} ${hoseSentence}</p>
+        <p>${meterNarrative} Purge hoses are included as pipe segments in the schedule.</p>
       `;
 
       const breakdownRows = [
-        ['Pipe installation (Table 4)', formatVolume(breakdown.pipeInstall_m3)],
-        ['Pipe purge (factor × install)', formatVolume(breakdown.pipePurge_m3)],
+        ['Pipe and hose installation (Table 4)', formatVolume(breakdown.pipeInstall_m3)],
+        [`Pipe purge allowance (${formatNumber(multiplier, 2)} × install)`, formatVolume(breakdown.pipePurge_m3)],
         ['Diaphragm installation (Table 3)', formatVolume(breakdown.diaphragmInstall_m3)],
-        ['Diaphragm purge (Table 3)', formatVolume(breakdown.diaphragmPurge_m3)],
+        [
+          `Diaphragm purge (${formatNumber(DIAPHRAGM_PURGE_MULTIPLIER, 0)} × Table 3 allowance)`,
+          formatVolume(breakdown.diaphragmPurge_m3)
+        ],
         ['Rotary installation (Table 3)', formatVolume(breakdown.rotaryInstall_m3)],
         ['Rotary purge (Table 3)', formatVolume(breakdown.rotaryPurge_m3)],
-        ['Purge hose allowance', formatVolume(breakdown.purgeHose_m3)],
-        ['Fittings allowance (10%)', formatVolume(fittingsAllowance)],
-        ['Estimated system volume', formatVolume(estimatedSystemVolume)],
-        ['Total installation', formatVolume(totals.installVolume_m3)],
+        ['Fittings allowance (10% of installation volumes)', formatVolume(fittingsAllowance)],
+        ['Estimated system volume (includes fittings)', formatVolume(estimatedSystemVolume)],
+        ['Total installation (excludes fittings)', formatVolume(totals.installVolume_m3)],
         ['Total purge', formatVolume(totals.purgeVolume_m3)]
       ];
       totalsBody.innerHTML = breakdownRows
@@ -480,15 +581,17 @@ function initialisePipeCalculator() {
         .map((segment) => {
           let install = Number.NaN;
           let purge = Number.NaN;
+          let label = segment.dn;
           try {
             install = pipeInstallVolume(segment.dn, segment.length_m);
             purge = pipePurgeVolume(segment.dn, segment.length_m, multiplier);
+            label = getPipeSegment(segment.dn).label;
           } catch (error) {
             console.error('Segment breakdown calculation failed', error);
           }
           return `
             <tr>
-              <td>${segment.dn}</td>
+              <td>${label}</td>
               <td class="numeric">${formatNumber(segment.length_m, 2)}</td>
               <td class="numeric">${formatVolume(install)}</td>
               <td class="numeric">${formatVolume(purge)}</td>
@@ -517,9 +620,10 @@ function initialisePipeCalculator() {
     try {
       const parsed = JSON.parse(hiddenField.value);
       if (Array.isArray(parsed)) {
+        const fallbackDn = pipeOptions[0] ?? null;
         pipeSegments = parsed
           .map((entry) => ({
-            dn: pipeOptions.includes(entry.dn) ? entry.dn : pipeOptions[0],
+            dn: pipeOptions.includes(entry.dn) ? entry.dn : fallbackDn,
             length_m:
               entry.length_m === null || entry.length_m === undefined
                 ? ''
@@ -539,6 +643,7 @@ function initialisePipeCalculator() {
   };
 
   addPipeButton.addEventListener('click', () => {
+    if (!pipeOptions.length) return;
     pipeSegments.push({ dn: pipeOptions[0], length_m: '' });
     renderRows();
     persistSegments();
@@ -550,10 +655,6 @@ function initialisePipeCalculator() {
   });
 
   rotarySelect.addEventListener('change', () => {
-    updateSummary();
-  });
-
-  hoseSelect.addEventListener('change', () => {
     updateSummary();
   });
 
@@ -1048,6 +1149,7 @@ if (queryMode === 'new') {
 }
 
 setVersionInfo();
+renderReferenceTables();
 initialisePipeCalculator();
 initialisePurgeHelpers();
 loadState();
