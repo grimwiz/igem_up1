@@ -134,7 +134,6 @@
               <tr>
                 <th scope="col">Pipe size (DN)</th>
                 <th scope="col">Length (m)</th>
-                <th scope="col">Volume per metre (m³)</th>
                 <th scope="col">Installation volume (m³)</th>
                 <th scope="col">Purge volume (m³)</th>
                 <th scope="col">Actions</th>
@@ -150,7 +149,6 @@
                 <tr>
                   <th scope="col">Hose size</th>
                   <th scope="col">Length (m)</th>
-                  <th scope="col">Volume per metre (m³)</th>
                   <th scope="col">Installation volume (m³)</th>
                   <th scope="col">Purge volume (m³)</th>
                 </tr>
@@ -164,16 +162,6 @@
                   <td>
                     <label class="sr-only" for="purge-hose-length">Purge hose length</label>
                     <input id="purge-hose-length" type="number" min="0" step="0.01" placeholder="0.00" />
-                  </td>
-                  <td class="numeric">
-                    <input
-                      id="purge-hose-volume"
-                      type="text"
-                      class="numeric-readonly"
-                      inputmode="decimal"
-                      readonly
-                      aria-label="Purge hose volume per metre"
-                    />
                   </td>
                   <td class="numeric">
                     <input
@@ -229,14 +217,25 @@
         <details id="pipe-volume-details">
           <summary>Breakdown</summary>
           <div class="calculation-details">
-            <table>
+            <h4>Installation build-up</h4>
+            <table class="pipe-breakdown-table">
               <thead>
                 <tr>
-                  <th scope="col">Component</th>
+                  <th scope="col">Step</th>
                   <th scope="col" class="numeric">Volume (m³)</th>
                 </tr>
               </thead>
-              <tbody id="pipe-volume-breakdown-body"></tbody>
+              <tbody id="installation-breakdown-body"></tbody>
+            </table>
+            <h4>Purge build-up</h4>
+            <table class="pipe-breakdown-table">
+              <thead>
+                <tr>
+                  <th scope="col">Step</th>
+                  <th scope="col" class="numeric">Volume (m³)</th>
+                </tr>
+              </thead>
+              <tbody id="purge-breakdown-body"></tbody>
             </table>
             <h4>Pipe segments</h4>
             <table class="pipe-table pipe-breakdown-table">
@@ -244,11 +243,24 @@
                 <tr>
                   <th scope="col">Pipe size</th>
                   <th scope="col">Length (m)</th>
+                  <th scope="col">Volume per metre (m³)</th>
                   <th scope="col">Install (m³)</th>
                   <th scope="col">Purge (m³)</th>
                 </tr>
               </thead>
               <tbody id="pipe-segment-breakdown-body"></tbody>
+            </table>
+            <h4>Meter allowances</h4>
+            <table class="pipe-table pipe-breakdown-table">
+              <thead>
+                <tr>
+                  <th scope="col">Meter</th>
+                  <th scope="col">Type</th>
+                  <th scope="col">Install (m³)</th>
+                  <th scope="col">Purge (m³)</th>
+                </tr>
+              </thead>
+              <tbody id="meter-breakdown-body"></tbody>
             </table>
             <p>
               Cross-check these totals with the latest IGEM/UP/1 publication on the IGEM technical services site and guidance in

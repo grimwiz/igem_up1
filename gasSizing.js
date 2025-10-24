@@ -380,13 +380,13 @@ export function pipePurgeVolume(dn, length_m, purgeMultiplier = DEFAULT_PURGE_MU
   return pipeInstallVolume(dn, length_m) * purgeMultiplier;
 }
 
-const getMeterInstallVolume = (map, meterName) => {
+const getMeterVolumes = (map, meterName) => {
   if (!meterName || meterName.toLowerCase() === 'no meter') {
-    return 0;
+    return { install: 0, purge: 0 };
   }
   const entry = map[meterName];
   if (!entry) throw new Error(`Unknown meter: ${meterName}`);
-  return entry.install;
+  return { install: entry.install, purge: entry.purge };
 };
 
 /**
@@ -404,35 +404,39 @@ export function computeTotals({
   purgeMultiplier = DEFAULT_PURGE_MULTIPLIER
 } = {}) {
   const pipeInstall = pipes.reduce((sum, seg) => sum + pipeInstallVolume(seg.dn, seg.length_m), 0);
-  const purgeHoseInstall =
+  const purgeHoseBaseVolume =
     purgeHose && purgeHose.dn ? pipeInstallVolume(purgeHose.dn, purgeHose.length_m ?? 0) : 0;
 
-  const pipeInstallWithHose = pipeInstall + purgeHoseInstall;
-
-  const diaphragmInstall = getMeterInstallVolume(DIAPHRAGM_METER_MAP, diaphragmMeter);
-  const rotaryInstall = getMeterInstallVolume(ROTARY_METER_MAP, rotaryMeter);
+  const diaphragmVolumes = getMeterVolumes(DIAPHRAGM_METER_MAP, diaphragmMeter);
+  const rotaryVolumes = getMeterVolumes(ROTARY_METER_MAP, rotaryMeter);
+  const diaphragmInstall = diaphragmVolumes.install;
+  const rotaryInstall = rotaryVolumes.install;
+  const diaphragmPurge = diaphragmVolumes.purge;
+  const rotaryPurge = rotaryVolumes.purge;
   const meterInstallTotal = diaphragmInstall + rotaryInstall;
   const meterInstallWithFittings = meterInstallTotal * 1.1;
 
   const pipePurge = pipeInstall * purgeMultiplier;
-  const purgeHosePurge = purgeHoseInstall * purgeMultiplier;
-  const diaphragmPurge = diaphragmInstall * purgeMultiplier;
-  const rotaryPurge = rotaryInstall * purgeMultiplier;
-  const purgeBeforeFittings = pipePurge + purgeHosePurge + diaphragmPurge + rotaryPurge;
-  const purgeWithFittings = purgeBeforeFittings * 1.1;
+  const purgeHosePurge = purgeHoseBaseVolume * purgeMultiplier;
+  const meterPurgeTotal = diaphragmPurge + rotaryPurge;
+  const purgeBeforeFittings = pipePurge + purgeHosePurge + meterPurgeTotal;
+  const purgeFittingsAllowance = purgeBeforeFittings * 0.1;
+  const purgeWithFittings = purgeBeforeFittings + purgeFittingsAllowance;
 
-  const systemComponentsVolume = pipeInstallWithHose + meterInstallTotal;
+  const systemComponentsVolume = pipeInstall + meterInstallTotal;
   const fittingsAllowance = systemComponentsVolume * 0.1;
   const estimatedSystemVolume = systemComponentsVolume + fittingsAllowance;
 
   return {
-    installVolume_m3: pipeInstallWithHose + meterInstallWithFittings,
+    installVolume_m3: pipeInstall + meterInstallWithFittings,
     purgeVolume_m3: purgeWithFittings,
     fittingsAllowance_m3: fittingsAllowance,
     estimatedSystemVolume_m3: estimatedSystemVolume,
+    systemComponentsVolume_m3: systemComponentsVolume,
     breakdown: {
       pipeInstall_m3: pipeInstall,
-      purgeHoseInstall_m3: purgeHoseInstall,
+      purgeHoseInstall_m3: 0,
+      purgeHoseBaseVolume_m3: purgeHoseBaseVolume,
       diaphragmInstall_m3: diaphragmInstall,
       rotaryInstall_m3: rotaryInstall,
       meterInstallTotal_m3: meterInstallTotal,
@@ -441,7 +445,9 @@ export function computeTotals({
       purgeHosePurge_m3: purgeHosePurge,
       diaphragmPurge_m3: diaphragmPurge,
       rotaryPurge_m3: rotaryPurge,
-      purgeBeforeFittings_m3: purgeBeforeFittings
+      meterPurge_m3: meterPurgeTotal,
+      purgeBeforeFittings_m3: purgeBeforeFittings,
+      purgeFittingsAllowance_m3: purgeFittingsAllowance
     }
   };
 }
