@@ -49,17 +49,7 @@
         </div>
         <div>
           <label for="gas-type">Gas Type</label>
-          <select id="gas-type">
-            <option value="natural">Natural Gas</option>
-            <option value="biomethane">Biomethane</option>
-            <option value="propane">Propane</option>
-            <option value="lpg" hidden>LPG (Propane – legacy)</option>
-            <option value="butane">Butane</option>
-            <option value="lpg-air-sng">LPG/Air (SNG)</option>
-            <option value="lpg-air-smg">LPG/Air (SMG)</option>
-            <option value="coal-gas">Coal Gas</option>
-            <option value="other">Other</option>
-          </select>
+          <select id="gas-type"></select>
         </div>
       </div>
     </section>
@@ -153,6 +143,62 @@
             <tbody id="pipe-rows"></tbody>
           </table>
           <button type="button" id="add-pipe-row" class="secondary-button">Add pipe segment</button>
+          <div class="purge-hose-wrapper">
+            <h4>Purge hose</h4>
+            <table class="pipe-table">
+              <thead>
+                <tr>
+                  <th scope="col">Hose size</th>
+                  <th scope="col">Length (m)</th>
+                  <th scope="col">Volume per metre (m³)</th>
+                  <th scope="col">Installation volume (m³)</th>
+                  <th scope="col">Purge volume (m³)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <label class="sr-only" for="purge-hose-size">Purge hose size</label>
+                    <select id="purge-hose-size"></select>
+                  </td>
+                  <td>
+                    <label class="sr-only" for="purge-hose-length">Purge hose length</label>
+                    <input id="purge-hose-length" type="number" min="0" step="0.01" placeholder="0.00" />
+                  </td>
+                  <td class="numeric">
+                    <input
+                      id="purge-hose-volume"
+                      type="text"
+                      class="numeric-readonly"
+                      inputmode="decimal"
+                      readonly
+                      aria-label="Purge hose volume per metre"
+                    />
+                  </td>
+                  <td class="numeric">
+                    <input
+                      id="purge-hose-install-volume"
+                      type="text"
+                      class="numeric-readonly"
+                      inputmode="decimal"
+                      readonly
+                      aria-label="Purge hose installation volume"
+                    />
+                  </td>
+                  <td class="numeric">
+                    <input
+                      id="purge-hose-purge-volume"
+                      type="text"
+                      class="numeric-readonly"
+                      inputmode="decimal"
+                      readonly
+                      aria-label="Purge hose purge volume"
+                    />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
         <div class="pipe-inputs">
           <div>
@@ -211,17 +257,6 @@
           </div>
         </details>
         <input type="hidden" id="pipe-configuration" />
-      </div>
-    </section>
-
-    <section id="igem-reference-data" class="reference-data-section">
-      <h2>IGEM/UP/1 Reference Tables</h2>
-      <p>
-        The planning data used by this tool is reproduced below for quick cross-checking. Each table summarises the relevant
-        IGEM/UP/1 allowances so engineers can validate their inputs without leaving the application.
-      </p>
-      <div id="igem-reference-table-container" class="reference-table-container">
-        <p>Reference tables load automatically when JavaScript is enabled.</p>
       </div>
     </section>
 
@@ -477,6 +512,16 @@
         <p class="version-note">
           Record these identifiers when printing or exporting so that any future corrections can be applied to the correct release.
         </p>
+      </div>
+      <div class="reference-tables">
+        <h3>Reference tables</h3>
+        <p>
+          Open a table to review the IGEM/UP/1 data behind the calculator. Each table opens on demand so the main workflow stays
+          uncluttered on smaller screens.
+        </p>
+        <div id="igem-reference-table-container" class="reference-table-container">
+          <p>Reference tables load when JavaScript is available.</p>
+        </div>
       </div>
     </section>
   </main>
