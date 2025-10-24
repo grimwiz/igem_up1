@@ -51,8 +51,13 @@
           <label for="gas-type">Gas Type</label>
           <select id="gas-type">
             <option value="natural">Natural Gas</option>
-            <option value="lpg">LPG (Propane)</option>
             <option value="biomethane">Biomethane</option>
+            <option value="propane">Propane</option>
+            <option value="lpg" hidden>LPG (Propane – legacy)</option>
+            <option value="butane">Butane</option>
+            <option value="lpg-air-sng">LPG/Air (SNG)</option>
+            <option value="lpg-air-smg">LPG/Air (SMG)</option>
+            <option value="coal-gas">Coal Gas</option>
             <option value="other">Other</option>
           </select>
         </div>
@@ -96,6 +101,27 @@
           </label>
           <input
             id="volume"
+            type="text"
+            class="numeric-readonly"
+            inputmode="decimal"
+            readonly
+            placeholder="Calculated automatically"
+            value="0.0000"
+          />
+        </div>
+        <div>
+          <label for="purge-volume">
+            Total Purge Volume (m³)
+            <span
+              class="info-icon"
+              tabindex="0"
+              role="button"
+              aria-label="Explanation for purge volume"
+              data-popover="Calculated automatically from the pipe schedule using the IGEM/UP/1 purge multiplier. Used when estimating purge duration."
+            ></span>
+          </label>
+          <input
+            id="purge-volume"
             type="text"
             class="numeric-readonly"
             inputmode="decimal"
@@ -277,6 +303,29 @@
             <input id="test-temp-end" type="number" step="0.1" placeholder="Ambient at end of test" />
           </div>
         </div>
+        <h4>Table 12 – Maximum purge flow reference</h4>
+        <div class="two-column">
+          <div>
+            <label for="purge-pipe-diameter">Pipe diameter to be purged (Table 12)</label>
+            <select id="purge-pipe-diameter"></select>
+          </div>
+          <div>
+            <label for="purge-max-flow-rate">Maximum purge flow rate (m³/h)</label>
+            <input id="purge-max-flow-rate" type="text" class="numeric-readonly" readonly placeholder="Auto" />
+          </div>
+          <div>
+            <label for="purge-time-minutes">Purge time at maximum flow (seconds)</label>
+            <input id="purge-time-minutes" type="text" class="numeric-readonly" readonly placeholder="Auto" />
+          </div>
+          <div>
+            <label for="operating-factor-f3-gas">Operating factor f₃ (gas service)</label>
+            <input id="operating-factor-f3-gas" type="text" class="numeric-readonly" readonly placeholder="Auto" />
+          </div>
+          <div>
+            <label for="operating-factor-f3-n2">Operating factor f₃ (nitrogen purge)</label>
+            <input id="operating-factor-f3-n2" type="text" class="numeric-readonly" readonly placeholder="Auto" />
+          </div>
+        </div>
         <button type="button" id="calculate-test-plan">Calculate Recommendations</button>
         <div class="calculation-results" id="test-calculation-summary" role="status" aria-live="polite">
           Set the design or operating pressure and build the pipe schedule to generate recommendations. Optional temperature
@@ -305,18 +354,6 @@
         <div>
           <label for="purge-medium">Purge Medium</label>
           <input id="purge-medium" type="text" placeholder="e.g. Nitrogen" />
-        </div>
-        <div>
-          <label for="purge-pipe-diameter">Pipe diameter to be purged (Table 12)</label>
-          <select id="purge-pipe-diameter"></select>
-        </div>
-        <div>
-          <label for="purge-max-flow-rate">Maximum purge flow rate (m³/min)</label>
-          <input id="purge-max-flow-rate" type="text" class="numeric-readonly" readonly placeholder="Auto" />
-        </div>
-        <div>
-          <label for="purge-time-minutes">Purge time at maximum flow (minutes)</label>
-          <input id="purge-time-minutes" type="text" class="numeric-readonly" readonly placeholder="Auto" />
         </div>
       </div>
       <div class="two-column">

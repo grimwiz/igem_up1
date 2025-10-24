@@ -6,6 +6,7 @@ import {
   TABLE6,
   TABLE6_MAP,
   TABLE12_MAP,
+  F3_MAP,
   computeTotals,
   DEFAULT_PURGE_MULTIPLIER,
   GAS_SIZING_DATA_VERSION,
@@ -146,6 +147,7 @@ function initialisePipeCalculator() {
   const segmentBody = document.getElementById('pipe-segment-breakdown-body');
   const hiddenField = document.getElementById('pipe-configuration');
   const systemVolumeInput = document.getElementById('volume');
+  const purgeVolumeInput = document.getElementById('purge-volume');
 
   if (
     !pipeRowsBody ||
@@ -410,6 +412,14 @@ function initialisePipeCalculator() {
         }
       }
 
+      if (purgeVolumeInput) {
+        const purgeValue = Number.isFinite(totals.purgeVolume_m3) ? totals.purgeVolume_m3.toFixed(4) : '';
+        if (purgeVolumeInput.value !== purgeValue) {
+          purgeVolumeInput.value = purgeValue;
+          purgeVolumeInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      }
+
       updateAllRowVolumes(multiplier);
 
       const multiplierSentence = multiplierValid
@@ -559,6 +569,10 @@ function initialisePurgeHelpers() {
   const purgePipeSelect = document.getElementById('purge-pipe-diameter');
   const purgeFlowInput = document.getElementById('purge-max-flow-rate');
   const purgeTimeInput = document.getElementById('purge-time-minutes');
+  const purgeVolumeInput = document.getElementById('purge-volume');
+  const gasTypeSelect = document.getElementById('gas-type');
+  const f3GasInput = document.getElementById('operating-factor-f3-gas');
+  const f3N2Input = document.getElementById('operating-factor-f3-n2');
   const gaugeSelect = document.getElementById('gauge-choice');
   const gaugeRangeInput = document.getElementById('gauge-range');
   const gaugeGrmInput = document.getElementById('gauge-grm');
@@ -575,23 +589,81 @@ function initialisePurgeHelpers() {
       purgePipeSelect.value = purgePipeOptions[0];
     }
 
+    const parsePurgeVolume = () => {
+      if (!purgeVolumeInput) return Number.NaN;
+      const value = parseFloat(purgeVolumeInput.value);
+      return Number.isFinite(value) && value >= 0 ? value : Number.NaN;
+    };
+
     const updatePurgeOutputs = () => {
       const selection = purgePipeSelect.value;
       const entry = TABLE12_MAP[selection];
-      if (!entry) {
-        updateReadOnlyInput(purgeFlowInput, '');
-        updateReadOnlyInput(purgeTimeInput, '');
+      const maxFlow = entry && Number.isFinite(entry.f3) ? entry.f3 : Number.NaN;
+      const totalVolume = parsePurgeVolume();
+
+      if (!Number.isFinite(maxFlow)) {
+        updateReadOnlyInput(purgeFlowInput, '—');
+      } else {
+        updateReadOnlyInput(purgeFlowInput, formatNumber(maxFlow, 2));
+      }
+
+      if (!Number.isFinite(maxFlow) || maxFlow <= 0 || !Number.isFinite(totalVolume)) {
+        updateReadOnlyInput(purgeTimeInput, '—');
         return;
       }
-      const flowDisplay = Number.isFinite(entry.f1) ? formatNumber(entry.f1, 2) : '—';
-      const timeMinutes = Number.isFinite(entry.f3) ? formatNumber(entry.f3, 0) : '—';
-      updateReadOnlyInput(purgeFlowInput, flowDisplay);
-      updateReadOnlyInput(purgeTimeInput, timeMinutes);
+
+      const purgeTimeSeconds = (3600 * totalVolume) / maxFlow;
+      updateReadOnlyInput(purgeTimeInput, formatNumber(purgeTimeSeconds, 2));
     };
 
     purgePipeSelect.addEventListener('change', updatePurgeOutputs);
     document.addEventListener('procedure-data-updated', updatePurgeOutputs);
+    if (purgeVolumeInput) {
+      purgeVolumeInput.addEventListener('input', updatePurgeOutputs);
+    }
     updatePurgeOutputs();
+  }
+
+  if (f3GasInput && f3N2Input) {
+    const mapGasTypeToF3Key = (value) => {
+      switch (String(value || '').toLowerCase()) {
+        case 'natural':
+        case 'biomethane':
+          return 'natural';
+        case 'propane':
+        case 'lpg':
+          return 'propane';
+        case 'butane':
+          return 'butane';
+        case 'lpg-air-sng':
+          return 'lpg/air (sng)';
+        case 'lpg-air-smg':
+          return 'lpg/air (smg)';
+        case 'coal-gas':
+          return 'coal gas';
+        default:
+          return null;
+      }
+    };
+
+    const updateOperatingFactors = () => {
+      const gasKey = mapGasTypeToF3Key(gasTypeSelect ? gasTypeSelect.value : null);
+      const entry = gasKey ? F3_MAP[gasKey] : null;
+      if (!entry) {
+        updateReadOnlyInput(f3GasInput, '—');
+        updateReadOnlyInput(f3N2Input, '—');
+        return;
+      }
+      updateReadOnlyInput(f3GasInput, formatNumber(entry.gas, 3));
+      updateReadOnlyInput(f3N2Input, formatNumber(entry.n2, 3));
+    };
+
+    if (gasTypeSelect) {
+      gasTypeSelect.addEventListener('change', updateOperatingFactors);
+      gasTypeSelect.addEventListener('input', updateOperatingFactors);
+    }
+    document.addEventListener('procedure-data-updated', updateOperatingFactors);
+    updateOperatingFactors();
   }
 
   if (gaugeSelect && gaugeRangeInput && gaugeGrmInput && gaugeTtdInput) {
