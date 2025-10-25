@@ -192,6 +192,19 @@ const normaliseLength = (value) => {
 };
 
 const formatMinutesValue = (value) => (Number.isFinite(value) ? formatNumber(value, 2) : '—');
+const EXISTING_CD_FACTOR = 0.047;
+const TYPE_A_OCCUPANCY_FACTOR = 2.8;
+
+const formatMinutesWithUnit = (value) => {
+  if (!Number.isFinite(value)) return '—';
+  return `${formatMinutesValue(value)} min`;
+};
+
+const formatRoomVolumeForLabel = (value) => {
+  if (!Number.isFinite(value)) return '—';
+  const decimals = Math.min(4, Math.max(0, countDecimalPlaces(value)));
+  return formatNumber(value, decimals);
+};
 
 const updateTtdCalculations = () => {
   const step11Source = document.getElementById('calculated-purge-volume');
@@ -232,14 +245,16 @@ const updateTtdCalculations = () => {
     ? gasFactorN2 * grm * step11Value
     : Number.NaN;
 
-  const existingCdGas = Number.isFinite(baseGas) ? baseGas * 0.047 : Number.NaN;
-  const existingCdN2 = Number.isFinite(baseN2) ? baseN2 * 0.047 : Number.NaN;
+  const existingCdGas = Number.isFinite(baseGas) ? baseGas * EXISTING_CD_FACTOR : Number.NaN;
+  const existingCdN2 = Number.isFinite(baseN2) ? baseN2 * EXISTING_CD_FACTOR : Number.NaN;
 
   const roomVolume = readNumber(roomVolumeInput);
   const roomFactor = Number.isFinite(roomVolume) && roomVolume > 0 ? 1 / roomVolume : Number.NaN;
 
-  const inTypeAGas = Number.isFinite(baseGas) && Number.isFinite(roomFactor) ? baseGas * 2.8 * roomFactor : Number.NaN;
-  const inTypeAN2 = Number.isFinite(baseN2) && Number.isFinite(roomFactor) ? baseN2 * 2.8 * roomFactor : Number.NaN;
+  const inTypeAGas =
+    Number.isFinite(baseGas) && Number.isFinite(roomFactor) ? baseGas * TYPE_A_OCCUPANCY_FACTOR * roomFactor : Number.NaN;
+  const inTypeAN2 =
+    Number.isFinite(baseN2) && Number.isFinite(roomFactor) ? baseN2 * TYPE_A_OCCUPANCY_FACTOR * roomFactor : Number.NaN;
 
   const setOutput = (element, value) => {
     if (!element) return;
@@ -255,34 +270,64 @@ const updateTtdCalculations = () => {
 
   const breakdownBody = document.getElementById('ttd-breakdown-body');
   if (breakdownBody) {
+    const existingFactorFormatted = formatNumber(EXISTING_CD_FACTOR, 3);
+    const typeAMultiplierFormatted = formatNumber(TYPE_A_OCCUPANCY_FACTOR, 1);
+    const roomVolumeFormatted = formatRoomVolumeForLabel(roomVolume);
+
+    const step12Label =
+      `Step 12 – Base TTD factor (gas) = F₁(gas) ${formatNumber(gasFactorGas, 2)} × GRM ${formatNumber(grm, 2)} × Step 11 ${formatVolume(
+        step11Value
+      )}` + (Number.isFinite(baseGas) ? ` = ${formatMinutesWithUnit(baseGas)}` : '');
+
+    const step13Label =
+      `Step 13 – Base TTD factor (N₂) = F₁(N₂) ${formatNumber(gasFactorN2, 2)} × GRM ${formatNumber(grm, 2)} × Step 11 ${formatVolume(
+        step11Value
+      )}` + (Number.isFinite(baseN2) ? ` = ${formatMinutesWithUnit(baseN2)}` : '');
+
+    const step14Label =
+      `Step 14 – Existing Type C & D (gas) = Step 12 ${formatMinutesWithUnit(baseGas)} × ${existingFactorFormatted}` +
+      (Number.isFinite(existingCdGas) ? ` = ${formatMinutesWithUnit(existingCdGas)}` : '');
+
+    const step15Label =
+      `Step 15 – Existing Type C & D (N₂) = Step 13 ${formatMinutesWithUnit(baseN2)} × ${existingFactorFormatted}` +
+      (Number.isFinite(existingCdN2) ? ` = ${formatMinutesWithUnit(existingCdN2)}` : '');
+
+    const step16Label =
+      `Step 16 – Existing in Type A (gas) = Step 12 ${formatMinutesWithUnit(baseGas)} × ${typeAMultiplierFormatted} ÷ Room volume ${roomVolumeFormatted}` +
+      (Number.isFinite(inTypeAGas) ? ` = ${formatMinutesWithUnit(inTypeAGas)}` : '');
+
+    const step17Label =
+      `Step 17 – Existing in Type A (N₂) = Step 13 ${formatMinutesWithUnit(baseN2)} × ${typeAMultiplierFormatted} ÷ Room volume ${roomVolumeFormatted}` +
+      (Number.isFinite(inTypeAN2) ? ` = ${formatMinutesWithUnit(inTypeAN2)}` : '');
+
     const rows = [
       {
-        label: 'Step 12 – Base TTD factor (gas) = F₁(gas) × GRM × Step 11',
+        label: step12Label,
         gas: baseGas,
         n2: Number.NaN
       },
       {
-        label: 'Step 13 – Base TTD factor (N₂) = F₁(N₂) × GRM × Step 11',
+        label: step13Label,
         gas: Number.NaN,
         n2: baseN2
       },
       {
-        label: 'Step 14 – Existing Type C & D (gas) = Step 12 × 0.047',
+        label: step14Label,
         gas: existingCdGas,
         n2: Number.NaN
       },
       {
-        label: 'Step 15 – Existing Type C & D (N₂) = Step 13 × 0.047',
+        label: step15Label,
         gas: Number.NaN,
         n2: existingCdN2
       },
       {
-        label: 'Step 16 – Existing in Type A (gas) = Step 12 × 2.8 ÷ Room volume',
+        label: step16Label,
         gas: inTypeAGas,
         n2: Number.NaN
       },
       {
-        label: 'Step 17 – Existing in Type A (N₂) = Step 13 × 2.8 ÷ Room volume',
+        label: step17Label,
         gas: Number.NaN,
         n2: inTypeAN2
       }
