@@ -460,6 +460,53 @@ input.numeric-readonly:focus {
   margin-top: 1rem;
 }
 
+.test-setup-preview {
+  margin-top: 1.5rem;
+  display: grid;
+  gap: 1.25rem;
+}
+
+.test-setup-block h4 {
+  margin-bottom: 0.5rem;
+}
+
+.test-setup-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.test-setup-table th,
+.test-setup-table td {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.test-setup-table th {
+  width: 50%;
+  font-weight: 600;
+}
+
+.test-setup-table input,
+.test-setup-table select {
+  width: 100%;
+}
+
+.test-setup-table .numeric-readonly {
+  background-color: #f1f5f9;
+}
+
+.test-setup-table td .numeric-readonly {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 900px) {
+  .test-setup-preview {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 .pipe-inputs {
   display: grid;
   gap: 1rem;
