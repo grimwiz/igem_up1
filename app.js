@@ -207,8 +207,8 @@ const formatRoomVolumeForLabel = (value) => {
 };
 
 const updateTtdCalculations = () => {
-  const step11Source = document.getElementById('calculated-purge-volume');
-  const step11Display = document.getElementById('ttd-step11');
+  const step5Source = document.getElementById('calculated-system-volume');
+  const step5Display = document.getElementById('ttd-step5');
   const roomVolumeInput = document.getElementById('ttd-room-volume');
   const outputs = {
     gasTypeA: document.getElementById('ttd-gas-type-a'),
@@ -219,12 +219,12 @@ const updateTtdCalculations = () => {
     n2TypeAIn: document.getElementById('ttd-n2-type-a-in')
   };
 
-  if (!step11Display || !roomVolumeInput) {
+  if (!step5Display || !roomVolumeInput) {
     return;
   }
 
-  const step11Value = readNumber(step11Source);
-  updateReadOnlyInput(step11Display, Number.isFinite(step11Value) ? formatNumber(step11Value, 4) : '—');
+  const step5Value = readNumber(step5Source);
+  updateReadOnlyInput(step5Display, Number.isFinite(step5Value) ? formatNumber(step5Value, 4) : '—');
 
   const gaugeSelect = document.getElementById('gauge-choice');
   const gasTypeSelect = document.getElementById('gas-type-f1');
@@ -238,11 +238,11 @@ const updateTtdCalculations = () => {
   const gasFactorGas = gasFactors && Number.isFinite(gasFactors?.gas) ? gasFactors.gas : Number.NaN;
   const gasFactorN2 = gasFactors && Number.isFinite(gasFactors?.n2) ? gasFactors.n2 : Number.NaN;
 
-  const baseGas = Number.isFinite(step11Value) && Number.isFinite(grm) && Number.isFinite(gasFactorGas)
-    ? gasFactorGas * grm * step11Value
+  const baseGas = Number.isFinite(step5Value) && Number.isFinite(grm) && Number.isFinite(gasFactorGas)
+    ? gasFactorGas * grm * step5Value
     : Number.NaN;
-  const baseN2 = Number.isFinite(step11Value) && Number.isFinite(grm) && Number.isFinite(gasFactorN2)
-    ? gasFactorN2 * grm * step11Value
+  const baseN2 = Number.isFinite(step5Value) && Number.isFinite(grm) && Number.isFinite(gasFactorN2)
+    ? gasFactorN2 * grm * step5Value
     : Number.NaN;
 
   const existingCdGas = Number.isFinite(baseGas) ? baseGas * EXISTING_CD_FACTOR : Number.NaN;
@@ -275,13 +275,13 @@ const updateTtdCalculations = () => {
     const roomVolumeFormatted = formatRoomVolumeForLabel(roomVolume);
 
     const step12Label =
-      `Step 12 – Base TTD factor (gas) = F₁(gas) ${formatNumber(gasFactorGas, 2)} × GRM ${formatNumber(grm, 2)} × Step 11 ${formatVolume(
-        step11Value
+      `Step 12 – Base TTD factor (gas) = F₁(gas) ${formatNumber(gasFactorGas, 2)} × GRM ${formatNumber(grm, 2)} × Step 5 ${formatVolume(
+        step5Value
       )}` + (Number.isFinite(baseGas) ? ` = ${formatMinutesWithUnit(baseGas)}` : '');
 
     const step13Label =
-      `Step 13 – Base TTD factor (N₂) = F₁(N₂) ${formatNumber(gasFactorN2, 2)} × GRM ${formatNumber(grm, 2)} × Step 11 ${formatVolume(
-        step11Value
+      `Step 13 – Base TTD factor (N₂) = F₁(N₂) ${formatNumber(gasFactorN2, 2)} × GRM ${formatNumber(grm, 2)} × Step 5 ${formatVolume(
+        step5Value
       )}` + (Number.isFinite(baseN2) ? ` = ${formatMinutesWithUnit(baseN2)}` : '');
 
     const step14Label =
@@ -1262,160 +1262,6 @@ function initialisePurgeHelpers() {
   updateTtdCalculations();
 }
 
-function calculateTestPlan() {
-  const summary = document.getElementById('test-calculation-summary');
-  const details = document.getElementById('test-calculation-details-body');
-  if (!summary || !details) return;
-
-  const designInput = document.getElementById('design-pressure');
-  const operatingInput = document.getElementById('operating-pressure');
-  const volumeInput = document.getElementById('volume');
-  const fillRateInput = document.getElementById('test-fill-rate');
-  const startTempInput = document.getElementById('test-temp-start');
-  const endTempInput = document.getElementById('test-temp-end');
-  const gasTypeInput = document.getElementById('gas-type-f1');
-
-  let designPressure = readNumber(designInput);
-  const operatingPressure = readNumber(operatingInput);
-  if (!Number.isFinite(designPressure)) {
-    designPressure = operatingPressure;
-  }
-
-  const systemVolume = readNumber(volumeInput);
-  const fillRate = readNumber(fillRateInput);
-  const startTemp = readNumber(startTempInput);
-  const endTemp = readNumber(endTempInput);
-  const gasType = gasTypeInput ? gasTypeInput.options[gasTypeInput.selectedIndex]?.text ?? 'Unknown' : 'Unknown';
-
-  if (!Number.isFinite(designPressure) || !Number.isFinite(systemVolume)) {
-    summary.innerHTML =
-      '<p>Please provide the design or operating pressure to generate recommendations. The estimated system volume is calculated automatically from the pipe schedule.</p>';
-    details.innerHTML =
-      '<p>Set the operating pressure in the Pipework Overview. Build the pipe schedule above to calculate the estimated system volume. Optional fields help refine the stabilisation and temperature allowances.</p>';
-    return;
-  }
-
-  const pressureThreshold = 75;
-  const lowPressure = designPressure <= pressureThreshold;
-  const algorithmLogic = lowPressure
-    ? `Low-pressure algorithm applied because design pressure (${formatNumber(designPressure, 1)} mbar) is ≤ ${pressureThreshold} mbar.`
-    : `Medium/high-pressure algorithm applied because design pressure (${formatNumber(designPressure, 1)} mbar) exceeds ${pressureThreshold} mbar.`;
-
-  const strengthTestPressure = lowPressure ? Math.max(designPressure * 1.5, 150) : Math.max(designPressure * 1.5, 1000);
-
-  let tightnessTestPressure = lowPressure ? Math.max(designPressure, 20) : Math.max(designPressure * 1.1, 300);
-  tightnessTestPressure = Math.min(tightnessTestPressure, strengthTestPressure * 0.9);
-
-  let holdTimeMinutes;
-  if (systemVolume <= 0.03) {
-    holdTimeMinutes = 5;
-  } else if (systemVolume <= 0.1) {
-    holdTimeMinutes = 10;
-  } else {
-    holdTimeMinutes = 20 + (systemVolume - 0.1) * 30;
-  }
-  holdTimeMinutes = Math.max(5, Math.min(holdTimeMinutes, 180));
-
-  let stabilisationMinutes = Number.NaN;
-  if (Number.isFinite(systemVolume) && Number.isFinite(fillRate) && fillRate > 0) {
-    stabilisationMinutes = Math.max(10, (systemVolume / fillRate) * 60 + 5);
-  }
-
-  let temperatureCompensation = Number.NaN;
-  let temperatureNarrative = '';
-  if (Number.isFinite(startTemp) && Number.isFinite(endTemp)) {
-    const deltaTemp = endTemp - startTemp;
-    const absoluteStart = startTemp + 273.15;
-    if (absoluteStart > 0) {
-      temperatureCompensation = tightnessTestPressure * (deltaTemp / absoluteStart);
-      temperatureNarrative =
-        deltaTemp === 0
-          ? 'No ambient temperature change detected during the test window.'
-          : `Temperature ${deltaTemp > 0 ? 'increase' : 'decrease'} of ${formatNumber(Math.abs(deltaTemp), 1)} °C would cause an apparent pressure ${
-              deltaTemp > 0 ? 'rise' : 'fall'
-            } of approximately ${formatNumber(Math.abs(temperatureCompensation), 2)} mbar.`;
-    }
-  }
-
-  summary.innerHTML = `
-    <p><strong>Algorithm used:</strong> ${algorithmLogic}</p>
-    <p><strong>Recommended strength test pressure:</strong> ${formatNumber(strengthTestPressure, 1)} mbar.</p>
-    <p><strong>Recommended tightness test pressure:</strong> ${formatNumber(tightnessTestPressure, 1)} mbar.</p>
-    <p><strong>Minimum hold time:</strong> ${formatNumber(holdTimeMinutes, 1)} minutes based on system volume.</p>
-    ${
-      Number.isFinite(stabilisationMinutes)
-        ? `<p><strong>Suggested stabilisation time:</strong> ${formatNumber(stabilisationMinutes, 1)} minutes, derived from fill rate.</p>`
-        : ''
-    }
-    ${temperatureNarrative ? `<p><strong>Temperature effect:</strong> ${temperatureNarrative}</p>` : ''}
-    <p><strong>Gas type context:</strong> ${gasType}.</p>
-  `;
-
-  const detailedRows = [
-    ['Design pressure (mbar)', formatNumber(designPressure, 2)],
-    ['Operating pressure (mbar)', Number.isFinite(operatingPressure) ? formatNumber(operatingPressure, 2) : 'Not provided'],
-    ['Total systems volume (m³)', formatNumber(systemVolume, 3)],
-    ['Expected fill rate (m³/h)', Number.isFinite(fillRate) ? formatNumber(fillRate, 2) : 'Not provided'],
-    ['Start temperature (°C)', Number.isFinite(startTemp) ? formatNumber(startTemp, 1) : 'Not provided'],
-    ['End temperature (°C)', Number.isFinite(endTemp) ? formatNumber(endTemp, 1) : 'Not provided']
-  ];
-
-  const calculationSteps = `
-    <ol>
-      <li>Determine pressure category by comparing design pressure with ${pressureThreshold} mbar.</li>
-      <li>Strength test pressure = max(1.5 × design pressure, ${lowPressure ? '150' : '1000'} mbar).</li>
-      <li>Tightness test pressure limited to 90% of strength recommendation and at least ${
-        lowPressure ? 'the design pressure or 20 mbar' : '10% above design pressure and ≥300 mbar'
-      }.</li>
-      <li>Hold time set from volume bands: ≤0.03 m³ → 5 min, 0.03–0.1 m³ → 10 min, additional 30 min per extra m³ beyond 0.1 m³.</li>
-      <li>${
-        Number.isFinite(stabilisationMinutes)
-          ? 'Stabilisation time = ((volume ÷ fill rate) × 60) + 5 minutes, minimum 10 minutes.'
-          : 'Provide a fill rate to calculate the stabilisation time.'
-      }</li>
-      <li>${
-        Number.isFinite(temperatureCompensation)
-          ? 'Temperature compensation uses ΔP = P × ΔT ÷ (T₁ + 273.15).'
-          : 'Enter start and end temperatures to estimate apparent pressure change from temperature variation.'
-      }</li>
-    </ol>
-  `;
-
-  const resultList = `
-    <ul>
-      <li>Strength test pressure: ${formatNumber(strengthTestPressure, 1)} mbar.</li>
-      <li>Tightness test pressure: ${formatNumber(tightnessTestPressure, 1)} mbar.</li>
-      <li>Minimum hold time: ${formatNumber(holdTimeMinutes, 1)} minutes.</li>
-      ${
-        Number.isFinite(stabilisationMinutes)
-          ? `<li>Suggested stabilisation time: ${formatNumber(stabilisationMinutes, 1)} minutes.</li>`
-          : ''
-      }
-      ${
-        Number.isFinite(temperatureCompensation)
-          ? `<li>Temperature-induced apparent pressure change: ±${formatNumber(Math.abs(temperatureCompensation), 2)} mbar.</li>`
-          : ''
-      }
-    </ul>
-  `;
-
-  details.innerHTML = `
-    <h4>Initial data</h4>
-    <table>
-      <thead>
-        <tr><th>Variable</th><th>Value</th></tr>
-      </thead>
-      <tbody>
-        ${detailedRows.map((row) => `<tr><td>${row[0]}</td><td>${row[1]}</td></tr>`).join('')}
-      </tbody>
-    </table>
-    <h4>Calculations</h4>
-    ${calculationSteps}
-    <h4>Results</h4>
-    ${resultList}
-  `;
-}
-
 const exportProcedure = () => {
   const payload = buildExportPayload();
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
@@ -1439,7 +1285,6 @@ const handleImportData = (objectData) => {
   }
   applyInputData(formData);
   saveState();
-  calculateTestPlan();
 };
 
 const importInput = document.getElementById('import-file');
@@ -1471,35 +1316,6 @@ inputs.forEach((input) => {
     input.addEventListener('input', saveState);
   }
 });
-
-const calculateButton = document.getElementById('calculate-test-plan');
-if (calculateButton) {
-  calculateButton.addEventListener('click', () => {
-    calculateTestPlan();
-    saveState();
-  });
-}
-
-const designPressureInput = document.getElementById('design-pressure');
-const operatingPressureInput = document.getElementById('operating-pressure');
-if (designPressureInput && operatingPressureInput) {
-  const syncDesignPlaceholder = () => {
-    if (!designPressureInput.value) {
-      const op = parseFloat(operatingPressureInput.value);
-      designPressureInput.placeholder = Number.isFinite(op)
-        ? `Using operating pressure (${op.toFixed(1)} mbar)`
-        : 'Automatically use operating pressure if blank';
-    } else {
-      designPressureInput.placeholder = 'Design pressure overrides operating pressure';
-    }
-  };
-  operatingPressureInput.addEventListener('input', () => {
-    syncDesignPlaceholder();
-    saveState();
-  });
-  designPressureInput.addEventListener('input', syncDesignPlaceholder);
-  syncDesignPlaceholder();
-}
 
 const popover = document.createElement('div');
 popover.className = 'popover-bubble hidden';
@@ -1577,14 +1393,6 @@ window.addEventListener('resize', () => {
   }
 });
 
-document.addEventListener('procedure-data-updated', () => {
-  if (designPressureInput && operatingPressureInput) {
-    const event = new Event('input');
-    operatingPressureInput.dispatchEvent(event);
-    designPressureInput.dispatchEvent(event);
-  }
-});
-
 const yearPlaceholder = document.getElementById('year');
 if (yearPlaceholder) {
   yearPlaceholder.textContent = new Date().getFullYear();
@@ -1620,5 +1428,4 @@ renderReferenceTables();
 initialisePipeCalculator();
 initialisePurgeHelpers();
 loadState();
-calculateTestPlan();
 registerServiceWorker();

@@ -259,29 +259,6 @@ details summary {
   color: var(--accent);
 }
 
-.calculation-block {
-  margin-top: 1.5rem;
-  border: 1px solid #d8e0e7;
-  border-radius: 12px;
-  padding: 1.25rem;
-  background: linear-gradient(180deg, rgba(0, 94, 165, 0.05), rgba(255, 255, 255, 0.95));
-}
-
-.calculation-block p {
-  margin-top: 0;
-}
-
-.calculation-results {
-  margin-top: 1rem;
-  border-radius: 10px;
-  background: rgba(0, 94, 165, 0.07);
-  padding: 1rem;
-}
-
-.calculation-results p {
-  margin: 0.35rem 0;
-}
-
 .calculation-details table {
   width: 100%;
   border-collapse: collapse;
@@ -312,6 +289,23 @@ details summary {
 
 .info-links a:hover {
   text-decoration: underline;
+}
+
+.calculation-results {
+  margin-top: 1rem;
+  border-radius: 10px;
+  background: rgba(0, 94, 165, 0.07);
+  padding: 1rem;
+}
+
+.calculation-results p {
+  margin: 0.35rem 0;
+}
+
+.table-context {
+  margin: 1rem 0 0.5rem;
+  font-style: italic;
+  color: #0b1f3a;
 }
 
 .version-info {
