@@ -334,6 +334,14 @@
                 <label for="ttd-room-volume">Room volume (m³)</label>
                 <input id="ttd-room-volume" type="number" min="0" step="0.01" placeholder="Enter room volume" />
               </div>
+              <div>
+                <label for="ttd-from-above">TTD from above (minutes)</label>
+                <input id="ttd-from-above" type="number" min="0" step="0.01" placeholder="Enter TTD" />
+              </div>
+              <div>
+                <label for="gauge-movement">Gauge movement (mbar)</label>
+                <input id="gauge-movement" type="number" min="0" step="0.01" placeholder="Enter gauge movement" />
+              </div>
             </div>
             <table class="ttd-table">
               <thead>
@@ -369,6 +377,39 @@
                   </td>
                   <td>
                     <input id="ttd-n2-type-a-in" type="text" class="numeric-readonly" readonly placeholder="Auto" />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <table class="ttd-table mplr-table">
+              <caption>MPLR estimates</caption>
+              <thead>
+                <tr>
+                  <th scope="col" class="numeric">MPLR gas</th>
+                  <th scope="col" class="numeric">MPLR N₂</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="numeric">
+                    <input
+                      id="mplr-gas"
+                      type="text"
+                      class="numeric-readonly"
+                      readonly
+                      placeholder="Auto"
+                      aria-label="Calculated MPLR using gas"
+                    />
+                  </td>
+                  <td class="numeric">
+                    <input
+                      id="mplr-n2"
+                      type="text"
+                      class="numeric-readonly"
+                      readonly
+                      placeholder="Auto"
+                      aria-label="Calculated MPLR using nitrogen"
+                    />
                   </td>
                 </tr>
               </tbody>
@@ -464,8 +505,6 @@
           <input id="purge-medium" type="text" placeholder="e.g. Nitrogen" />
         </div>
       </div>
-      <label for="purge-calculations">Purge Volume Calculations</label>
-      <textarea id="purge-calculations" placeholder="Include pipe volume, purge factor, flow rate and total purge time."></textarea>
       <label for="purge-steps">Step-by-Step Instructions</label>
       <textarea id="purge-steps" placeholder="Pre-purge checks, purge sequence, confirmation of gas-free atmosphere, recommissioning."></textarea>
     </section>

@@ -210,6 +210,10 @@ const updateTtdCalculations = () => {
   const step5Source = document.getElementById('calculated-system-volume');
   const step5Display = document.getElementById('ttd-step5');
   const roomVolumeInput = document.getElementById('ttd-room-volume');
+  const ttdFromAboveInput = document.getElementById('ttd-from-above');
+  const gaugeMovementInput = document.getElementById('gauge-movement');
+  const f3GasInput = document.getElementById('operating-factor-f3-gas');
+  const f3N2Input = document.getElementById('operating-factor-f3-n2');
   const outputs = {
     gasTypeA: document.getElementById('ttd-gas-type-a'),
     gasTypeCD: document.getElementById('ttd-gas-type-cd'),
@@ -217,6 +221,10 @@ const updateTtdCalculations = () => {
     n2TypeA: document.getElementById('ttd-n2-type-a'),
     n2TypeCD: document.getElementById('ttd-n2-type-cd'),
     n2TypeAIn: document.getElementById('ttd-n2-type-a-in')
+  };
+  const mplrOutputs = {
+    gas: document.getElementById('mplr-gas'),
+    n2: document.getElementById('mplr-n2')
   };
 
   if (!step5Display || !roomVolumeInput) {
@@ -267,6 +275,37 @@ const updateTtdCalculations = () => {
   setOutput(outputs.n2TypeCD, existingCdN2);
   setOutput(outputs.gasTypeAIn, inTypeAGas);
   setOutput(outputs.n2TypeAIn, inTypeAN2);
+
+  const totalVolume = step5Value;
+  const gaugeMovement = readNumber(gaugeMovementInput);
+  const ttdFromAbove = readNumber(ttdFromAboveInput);
+  const f3GasValue = readNumber(f3GasInput);
+  const f3N2Value = readNumber(f3N2Input);
+
+  const calculateMplr = (f3Value) => {
+    if (
+      !Number.isFinite(totalVolume) ||
+      !Number.isFinite(gaugeMovement) ||
+      !Number.isFinite(ttdFromAbove) ||
+      !Number.isFinite(f3Value) ||
+      ttdFromAbove <= 0
+    ) {
+      return Number.NaN;
+    }
+    return (totalVolume * gaugeMovement * f3Value) / ttdFromAbove;
+  };
+
+  const formatMplrValue = (value) => (Number.isFinite(value) ? formatNumber(value, 3) : '—');
+
+  const mplrGasValue = calculateMplr(f3GasValue);
+  const mplrN2Value = calculateMplr(f3N2Value);
+
+  if (mplrOutputs.gas) {
+    updateReadOnlyInput(mplrOutputs.gas, formatMplrValue(mplrGasValue));
+  }
+  if (mplrOutputs.n2) {
+    updateReadOnlyInput(mplrOutputs.n2, formatMplrValue(mplrN2Value));
+  }
 
   const breakdownBody = document.getElementById('ttd-breakdown-body');
   if (breakdownBody) {
@@ -1087,6 +1126,8 @@ function initialisePurgeHelpers() {
   const gaugeGrmInput = document.getElementById('gauge-grm');
   const gaugeTtdInput = document.getElementById('gauge-ttd-max');
   const roomVolumeInput = document.getElementById('ttd-room-volume');
+  const ttdFromAboveInput = document.getElementById('ttd-from-above');
+  const gaugeMovementInput = document.getElementById('gauge-movement');
 
   const ensureGasSelectOptions = (select) => {
     if (!select) return;
@@ -1256,6 +1297,14 @@ function initialisePurgeHelpers() {
 
   if (roomVolumeInput) {
     roomVolumeInput.addEventListener('input', updateTtdCalculations);
+  }
+
+  if (ttdFromAboveInput) {
+    ttdFromAboveInput.addEventListener('input', updateTtdCalculations);
+  }
+
+  if (gaugeMovementInput) {
+    gaugeMovementInput.addEventListener('input', updateTtdCalculations);
   }
 
   document.addEventListener('procedure-data-updated', updateTtdCalculations);
