@@ -77,13 +77,25 @@ const applyInputData = (data = {}) => {
     if (input.dataset.persist === 'never') return;
     if (input.readOnly && input.dataset.persist !== 'always') return;
     if (input.type === 'checkbox') {
-      input.checked = Boolean(data[input.id]);
-    } else if (Object.prototype.hasOwnProperty.call(data, input.id)) {
-      input.value = data[input.id] ?? '';
-    } else if (input.tagName !== 'SELECT') {
+      input.checked = false;
+    } else {
       input.value = '';
     }
   });
+
+  inputs.forEach((input) => {
+    if (!input || !input.id) return;
+    if (input.dataset.persist === 'never') return;
+    if (input.readOnly && input.dataset.persist !== 'always') return;
+    if (input.type === 'checkbox') {
+      input.checked = Boolean(data[input.id]);
+      return;
+    }
+    if (Object.prototype.hasOwnProperty.call(data, input.id)) {
+      input.value = data[input.id] ?? '';
+    }
+  });
+
   dispatchDataUpdated();
 };
 
@@ -415,10 +427,8 @@ function initialisePipeCalculator() {
   const summary = document.getElementById('pipe-volume-summary');
   const installationBody = document.getElementById('installation-breakdown-body');
   const purgeBody = document.getElementById('purge-breakdown-body');
-  const diaphragmAllowanceCaption = document.getElementById('diaphragm-meter-allowances-caption');
   const diaphragmInstallCell = document.getElementById('diaphragm-meter-install');
   const diaphragmPurgeCell = document.getElementById('diaphragm-meter-purge');
-  const rotaryAllowanceCaption = document.getElementById('rotary-meter-allowances-caption');
   const rotaryInstallCell = document.getElementById('rotary-meter-install');
   const rotaryPurgeCell = document.getElementById('rotary-meter-purge');
   const hiddenField = document.getElementById('pipe-configuration');
@@ -437,10 +447,8 @@ function initialisePipeCalculator() {
     !summary ||
     !installationBody ||
     !purgeBody ||
-    !diaphragmAllowanceCaption ||
     !diaphragmInstallCell ||
     !diaphragmPurgeCell ||
-    !rotaryAllowanceCaption ||
     !rotaryInstallCell ||
     !rotaryPurgeCell ||
     !hiddenField ||
@@ -453,43 +461,36 @@ function initialisePipeCalculator() {
   }
 
   const diaphragmAllowanceElements = {
-    caption: diaphragmAllowanceCaption,
     install: diaphragmInstallCell,
-    purge: diaphragmPurgeCell,
-    baseCaption: (diaphragmAllowanceCaption && diaphragmAllowanceCaption.textContent) ||
-      'Diaphragm valve allowances'
+    purge: diaphragmPurgeCell
   };
 
   const rotaryAllowanceElements = {
-    caption: rotaryAllowanceCaption,
     install: rotaryInstallCell,
-    purge: rotaryPurgeCell,
-    baseCaption: (rotaryAllowanceCaption && rotaryAllowanceCaption.textContent) ||
-      'Rotary valve allowances'
+    purge: rotaryPurgeCell
+  };
+
+  const resetMeterAllowanceTable = (elements) => {
+    if (elements.install) {
+      elements.install.textContent = '';
+    }
+    if (elements.purge) {
+      elements.purge.textContent = '';
+    }
   };
 
   const updateMeterAllowanceTable = (elements, selection, installVolume, purgeVolume) => {
-    const label = formatMeterLabel(selection || 'No Meter');
-    if (elements.caption) {
-      elements.caption.textContent = `${elements.baseCaption} (${label})`;
+    const selectedValue = (selection || '').toLowerCase();
+    const hasSelection = Boolean(selection) && selectedValue !== 'no meter';
+    if (!hasSelection) {
+      resetMeterAllowanceTable(elements);
+      return;
     }
     if (elements.install) {
       elements.install.textContent = formatVolume(installVolume);
     }
     if (elements.purge) {
       elements.purge.textContent = formatVolume(purgeVolume);
-    }
-  };
-
-  const resetMeterAllowanceTable = (elements) => {
-    if (elements.caption) {
-      elements.caption.textContent = elements.baseCaption || '';
-    }
-    if (elements.install) {
-      elements.install.textContent = '—';
-    }
-    if (elements.purge) {
-      elements.purge.textContent = '—';
     }
   };
   const sortedSegments = PIPE_SIZES.slice().sort((a, b) =>
@@ -513,19 +514,31 @@ function initialisePipeCalculator() {
         if (!aIsNoMeter && bIsNoMeter) return 1;
         return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
       });
-  const formatMeterLabel = (value) => (value.toLowerCase() === 'no meter' ? 'No Meter' : value.toUpperCase());
+  const formatMeterLabel = (value) => {
+    if (!value) return 'None';
+    return value.toLowerCase() === 'no meter' ? 'None' : value.toUpperCase();
+  };
   const diaphragmMeterOptions = sortMeterNames(DIAPHRAGM_METERS.map((entry) => entry.meter));
   const rotaryMeterOptions = sortMeterNames(ROTARY_METERS.map((entry) => entry.meter));
-  const populateMeterSelect = (select, options) => {
+  const defaultDiaphragmValue =
+    diaphragmMeterOptions.find((option) => option.toLowerCase() === 'no meter') ?? diaphragmMeterOptions[0] ?? '';
+  const defaultRotaryValue =
+    rotaryMeterOptions.find((option) => option.toLowerCase() === 'no meter') ?? rotaryMeterOptions[0] ?? '';
+  const populateMeterSelect = (select, options, defaultValue) => {
     select.innerHTML = options.map((meter) => `<option value="${meter}">${formatMeterLabel(meter)}</option>`).join('');
-    if (!select.value) {
-      const defaultMeter = options.find((option) => option.toLowerCase() === 'no meter') ?? options[0] ?? '';
-      select.value = defaultMeter;
+    if (defaultValue && options.includes(defaultValue)) {
+      select.value = defaultValue;
+    } else if (options.length) {
+      select.value = options[0];
+    } else {
+      select.value = '';
     }
   };
 
-  populateMeterSelect(diaphragmSelect, diaphragmMeterOptions);
-  populateMeterSelect(rotarySelect, rotaryMeterOptions);
+  populateMeterSelect(diaphragmSelect, diaphragmMeterOptions, defaultDiaphragmValue);
+  populateMeterSelect(rotarySelect, rotaryMeterOptions, defaultRotaryValue);
+
+  let ensureMeterDefaults = () => {};
 
   if (!purgeMultiplierInput.value) {
     purgeMultiplierInput.value = DEFAULT_PURGE_MULTIPLIER.toFixed(1);
@@ -877,6 +890,21 @@ function initialisePipeCalculator() {
     }
   };
 
+  ensureMeterDefaults = () => {
+    let changed = false;
+    if (!diaphragmSelect.value && defaultDiaphragmValue) {
+      diaphragmSelect.value = defaultDiaphragmValue;
+      changed = true;
+    }
+    if (!rotarySelect.value && defaultRotaryValue) {
+      rotarySelect.value = defaultRotaryValue;
+      changed = true;
+    }
+    if (changed) {
+      updateSummary();
+    }
+  };
+
   const restoreFromHidden = () => {
     if (!hiddenField) return;
     if (!hiddenField.value) {
@@ -993,7 +1021,9 @@ function initialisePipeCalculator() {
   });
 
   document.addEventListener('procedure-data-updated', restoreFromHidden);
+  document.addEventListener('procedure-data-updated', ensureMeterDefaults);
   restoreFromHidden();
+  ensureMeterDefaults();
 }
 
 function initialisePurgeHelpers() {
