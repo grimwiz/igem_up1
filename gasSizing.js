@@ -421,7 +421,7 @@ export function computeTotals({
   const purgeHosePurge = purgeHoseBaseVolume * purgeMultiplier;
   const meterPurgeTotal = diaphragmPurge + rotaryPurge;
   const purgeBeforeFittings = pipePurge + purgeHosePurge + meterPurgeTotal;
-  const purgeFittingsAllowance = purgeBeforeFittings * 0.1 * purgeMultiplier;
+  const purgeFittingsAllowance = purgeHosePurge * 0.1 * purgeMultiplier;
   const purgeWithFittings = purgeBeforeFittings + purgeFittingsAllowance;
 
   const systemComponentsVolume = pipeInstall + meterInstallTotal;

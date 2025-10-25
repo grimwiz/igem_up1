@@ -398,23 +398,45 @@ input.numeric-readonly:focus {
   min-height: 2.25rem;
 }
 
-.meter-allowances {
-  grid-column: 1 / -1;
-  background: rgba(0, 0, 0, 0.03);
-  border-radius: 10px;
-  padding: 0.75rem;
+.meter-input {
   display: grid;
   gap: 0.5rem;
-  overflow-x: auto;
+  align-content: start;
 }
 
-.meter-allowances h4 {
-  margin: 0;
+.meter-allowance-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.meter-allowance-table caption {
+  text-align: left;
+  font-weight: 600;
   color: var(--primary);
+  padding: 0.5rem 0.75rem;
 }
 
-.meter-allowances-table {
-  min-width: 0;
+.meter-allowance-table th,
+.meter-allowance-table td {
+  padding: 0.4rem 0.75rem;
+}
+
+.meter-allowance-table th {
+  text-align: left;
+  font-weight: 500;
+}
+
+.meter-allowance-table tr + tr th,
+.meter-allowance-table tr + tr td {
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.meter-allowance-table td.numeric {
+  text-align: right;
 }
 
 .pipe-breakdown-table {

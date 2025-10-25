@@ -303,7 +303,12 @@ function initialisePipeCalculator() {
   const summary = document.getElementById('pipe-volume-summary');
   const installationBody = document.getElementById('installation-breakdown-body');
   const purgeBody = document.getElementById('purge-breakdown-body');
-  const meterBody = document.getElementById('meter-allowances-body');
+  const diaphragmAllowanceCaption = document.getElementById('diaphragm-meter-allowances-caption');
+  const diaphragmInstallCell = document.getElementById('diaphragm-meter-install');
+  const diaphragmPurgeCell = document.getElementById('diaphragm-meter-purge');
+  const rotaryAllowanceCaption = document.getElementById('rotary-meter-allowances-caption');
+  const rotaryInstallCell = document.getElementById('rotary-meter-install');
+  const rotaryPurgeCell = document.getElementById('rotary-meter-purge');
   const hiddenField = document.getElementById('pipe-configuration');
   const systemVolumeInput = document.getElementById('calculated-system-volume');
   const purgeVolumeInput = document.getElementById('calculated-purge-volume');
@@ -320,7 +325,12 @@ function initialisePipeCalculator() {
     !summary ||
     !installationBody ||
     !purgeBody ||
-    !meterBody ||
+    !diaphragmAllowanceCaption ||
+    !diaphragmInstallCell ||
+    !diaphragmPurgeCell ||
+    !rotaryAllowanceCaption ||
+    !rotaryInstallCell ||
+    !rotaryPurgeCell ||
     !hiddenField ||
     !systemVolumeInput ||
     !purgeHoseSelect ||
@@ -329,6 +339,47 @@ function initialisePipeCalculator() {
   ) {
     return;
   }
+
+  const diaphragmAllowanceElements = {
+    type: 'Diaphragm',
+    caption: diaphragmAllowanceCaption,
+    install: diaphragmInstallCell,
+    purge: diaphragmPurgeCell,
+    baseCaption: diaphragmAllowanceCaption.textContent || 'Diaphragm meter allowances'
+  };
+
+  const rotaryAllowanceElements = {
+    type: 'Rotary',
+    caption: rotaryAllowanceCaption,
+    install: rotaryInstallCell,
+    purge: rotaryPurgeCell,
+    baseCaption: rotaryAllowanceCaption.textContent || 'Rotary meter allowances'
+  };
+
+  const updateMeterAllowanceTable = (elements, selection, installVolume, purgeVolume) => {
+    const label = formatMeterLabel(selection || 'No Meter');
+    if (elements.caption) {
+      elements.caption.textContent = `${elements.type} meter allowances (${label})`;
+    }
+    if (elements.install) {
+      elements.install.textContent = formatVolume(installVolume);
+    }
+    if (elements.purge) {
+      elements.purge.textContent = formatVolume(purgeVolume);
+    }
+  };
+
+  const resetMeterAllowanceTable = (elements) => {
+    if (elements.caption) {
+      elements.caption.textContent = elements.baseCaption || `${elements.type} meter allowances`;
+    }
+    if (elements.install) {
+      elements.install.textContent = '—';
+    }
+    if (elements.purge) {
+      elements.purge.textContent = '—';
+    }
+  };
   const sortedSegments = PIPE_SIZES.slice().sort((a, b) =>
     a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: 'base' })
   );
@@ -637,10 +688,22 @@ function initialisePipeCalculator() {
       }
       const meterNarrative = meterNarrativeParts.join(' ');
 
+      updateMeterAllowanceTable(
+        diaphragmAllowanceElements,
+        diaphragmSelection,
+        breakdown.diaphragmInstall_m3,
+        breakdown.diaphragmPurge_m3
+      );
+      updateMeterAllowanceTable(
+        rotaryAllowanceElements,
+        rotarySelection,
+        breakdown.rotaryInstall_m3,
+        breakdown.rotaryPurge_m3
+      );
+
       summary.innerHTML = `
-        <p><strong>Total installation volume:</strong> ${formatVolume(totals.installVolume_m3)} m³.</p>
-        <p><strong>Total purge volume:</strong> ${formatVolume(totals.purgeVolume_m3)} m³.</p>
         <p><strong>Total systems volume (incl. fittings):</strong> ${formatVolume(estimatedSystemVolume)} m³.</p>
+        <p><strong>Total purge volume:</strong> ${formatVolume(totals.purgeVolume_m3)} m³.</p>
         <p>${multiplierSentence} Meter purge allowances use the Table 3 values (diaphragm figures multiplied by ${formatNumber(
           DIAPHRAGM_PURGE_MULTIPLIER,
           0
@@ -677,7 +740,7 @@ function initialisePipeCalculator() {
         ],
         ['Step 9 – Total purge before fittings = Step 6 + Step 7 + Step 8', formatVolume(purgeBeforeFittings)],
         [
-          `Step 10 – Fittings allowance (10% of Step 9 × ${formatNumber(multiplier, 2)})`,
+          `Step 10 – Fittings allowance (10% of Step 7 × ${formatNumber(multiplier, 2)})`,
           formatVolume(purgeFittingsAllowance)
         ],
         ['Step 11 – Total purge volume = Step 9 + Step 10', formatVolume(totals.purgeVolume_m3)]
@@ -686,37 +749,12 @@ function initialisePipeCalculator() {
         .map((row) => `<tr><td>${row[0]}</td><td class="numeric">${row[1]}</td></tr>`)
         .join('');
 
-      const meterRows = [
-        {
-          label: formatMeterLabel(diaphragmSelection || 'No Meter'),
-          type: 'Diaphragm',
-          install: breakdown.diaphragmInstall_m3,
-          purge: breakdown.diaphragmPurge_m3
-        },
-        {
-          label: formatMeterLabel(rotarySelection || 'No Meter'),
-          type: 'Rotary',
-          install: breakdown.rotaryInstall_m3,
-          purge: breakdown.rotaryPurge_m3
-        }
-      ];
-      meterBody.innerHTML = meterRows
-        .map(
-          (row) => `
-            <tr>
-              <td>${row.label}</td>
-              <td>${row.type}</td>
-              <td class="numeric">${formatVolume(row.install)}</td>
-              <td class="numeric">${formatVolume(row.purge)}</td>
-            </tr>
-          `
-        )
-        .join('');
     } catch (error) {
       summary.innerHTML = `<p>Unable to calculate volumes: ${error instanceof Error ? error.message : 'Unknown error'}.</p>`;
       installationBody.innerHTML = '';
       purgeBody.innerHTML = '';
-      meterBody.innerHTML = '';
+      resetMeterAllowanceTable(diaphragmAllowanceElements);
+      resetMeterAllowanceTable(rotaryAllowanceElements);
       console.error('Volume calculation failed', error);
     }
   };
