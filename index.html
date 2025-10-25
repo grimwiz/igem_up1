@@ -142,35 +142,42 @@
           </div>
         </div>
         <div class="pipe-inputs">
-          <div class="meter-input">
-            <label for="diaphragm-meter-select">Diaphragm meter (Table 3)</label>
-            <select id="diaphragm-meter-select"></select>
-            <table class="meter-allowance-table" aria-live="polite">
-              <caption id="diaphragm-meter-allowances-caption">Diaphragm meter allowances</caption>
+          <div class="meter-selection-wrapper">
+            <table class="meter-selection-table" aria-live="polite">
+              <caption>Valve allowances</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Valve</th>
+                  <th scope="col">Selection</th>
+                  <th scope="col" class="numeric">Installation allowance (m³)</th>
+                  <th scope="col" class="numeric">Purge allowance (m³)</th>
+                </tr>
+              </thead>
               <tbody>
                 <tr>
-                  <th scope="row">Installation allowance (m³)</th>
+                  <th scope="row">
+                    <label for="diaphragm-meter-select">Diaphragm valve (Table 3)</label>
+                    <div id="diaphragm-meter-allowances-caption" class="meter-selection-caption">
+                      Diaphragm valve allowances
+                    </div>
+                  </th>
+                  <td>
+                    <select id="diaphragm-meter-select"></select>
+                  </td>
                   <td id="diaphragm-meter-install" class="numeric">—</td>
-                </tr>
-                <tr>
-                  <th scope="row">Purge allowance (m³)</th>
                   <td id="diaphragm-meter-purge" class="numeric">—</td>
                 </tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="meter-input">
-            <label for="rotary-meter-select">Rotary meter (Table 3)</label>
-            <select id="rotary-meter-select"></select>
-            <table class="meter-allowance-table" aria-live="polite">
-              <caption id="rotary-meter-allowances-caption">Rotary meter allowances</caption>
-              <tbody>
                 <tr>
-                  <th scope="row">Installation allowance (m³)</th>
+                  <th scope="row">
+                    <label for="rotary-meter-select">Rotary valve (Table 3)</label>
+                    <div id="rotary-meter-allowances-caption" class="meter-selection-caption">
+                      Rotary valve allowances
+                    </div>
+                  </th>
+                  <td>
+                    <select id="rotary-meter-select"></select>
+                  </td>
                   <td id="rotary-meter-install" class="numeric">—</td>
-                </tr>
-                <tr>
-                  <th scope="row">Purge allowance (m³)</th>
                   <td id="rotary-meter-purge" class="numeric">—</td>
                 </tr>
               </tbody>

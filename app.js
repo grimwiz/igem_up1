@@ -341,25 +341,25 @@ function initialisePipeCalculator() {
   }
 
   const diaphragmAllowanceElements = {
-    type: 'Diaphragm',
     caption: diaphragmAllowanceCaption,
     install: diaphragmInstallCell,
     purge: diaphragmPurgeCell,
-    baseCaption: diaphragmAllowanceCaption.textContent || 'Diaphragm meter allowances'
+    baseCaption: (diaphragmAllowanceCaption && diaphragmAllowanceCaption.textContent) ||
+      'Diaphragm valve allowances'
   };
 
   const rotaryAllowanceElements = {
-    type: 'Rotary',
     caption: rotaryAllowanceCaption,
     install: rotaryInstallCell,
     purge: rotaryPurgeCell,
-    baseCaption: rotaryAllowanceCaption.textContent || 'Rotary meter allowances'
+    baseCaption: (rotaryAllowanceCaption && rotaryAllowanceCaption.textContent) ||
+      'Rotary valve allowances'
   };
 
   const updateMeterAllowanceTable = (elements, selection, installVolume, purgeVolume) => {
     const label = formatMeterLabel(selection || 'No Meter');
     if (elements.caption) {
-      elements.caption.textContent = `${elements.type} meter allowances (${label})`;
+      elements.caption.textContent = `${elements.baseCaption} (${label})`;
     }
     if (elements.install) {
       elements.install.textContent = formatVolume(installVolume);
@@ -371,7 +371,7 @@ function initialisePipeCalculator() {
 
   const resetMeterAllowanceTable = (elements) => {
     if (elements.caption) {
-      elements.caption.textContent = elements.baseCaption || `${elements.type} meter allowances`;
+      elements.caption.textContent = elements.baseCaption || '';
     }
     if (elements.install) {
       elements.install.textContent = '—';
@@ -740,7 +740,7 @@ function initialisePipeCalculator() {
         ],
         ['Step 9 – Total purge before fittings = Step 6 + Step 7 + Step 8', formatVolume(purgeBeforeFittings)],
         [
-          `Step 10 – Fittings allowance (10% of Step 7 × ${formatNumber(multiplier, 2)})`,
+          `Step 10 – Fittings allowance (10% of Step 6 × ${formatNumber(multiplier, 2)})`,
           formatVolume(purgeFittingsAllowance)
         ],
         ['Step 11 – Total purge volume = Step 9 + Step 10', formatVolume(totals.purgeVolume_m3)]
