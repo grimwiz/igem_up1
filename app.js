@@ -13,7 +13,6 @@ import {
   GAS_SIZING_DATA_VERSION,
   pipeInstallVolume,
   pipePurgeVolume,
-  getPipeSegment,
   STANDARD_REFERENCE_TABLES,
   GAS_TYPE_OPTIONS,
   DIAPHRAGM_PURGE_MULTIPLIER
@@ -283,7 +282,6 @@ function initialisePipeCalculator() {
   const summary = document.getElementById('pipe-volume-summary');
   const installationBody = document.getElementById('installation-breakdown-body');
   const purgeBody = document.getElementById('purge-breakdown-body');
-  const segmentBody = document.getElementById('pipe-segment-breakdown-body');
   const meterBody = document.getElementById('meter-breakdown-body');
   const hiddenField = document.getElementById('pipe-configuration');
   const systemVolumeInput = document.getElementById('volume');
@@ -302,7 +300,6 @@ function initialisePipeCalculator() {
     !summary ||
     !installationBody ||
     !purgeBody ||
-    !segmentBody ||
     !meterBody ||
     !hiddenField ||
     !systemVolumeInput ||
@@ -637,10 +634,7 @@ function initialisePipeCalculator() {
         ['Step 1 – Pipe installation (Table 4)', formatVolume(pipeInstallTotal)],
         ['Step 2 – Meter installation (Table 3)', formatVolume(meterInstallTotal)],
         ['Step 3 – Base system volume = Step 1 + Step 2', formatVolume(systemBaseVolume)],
-        [
-          'Step 4 – Fittings allowance (Step 1 × 1.1 − Step 1)',
-          formatVolume(fittingsAllowance)
-        ],
+        ['Step 4 – Fittings allowance (10% of Step 1)', formatVolume(fittingsAllowance)],
         ['Step 5 – Total systems volume = Step 3 + Step 4', formatVolume(estimatedSystemVolume)]
       ];
       installationBody.innerHTML = installationRows
@@ -670,59 +664,6 @@ function initialisePipeCalculator() {
       purgeBody.innerHTML = purgeRows
         .map((row) => `<tr><td>${row[0]}</td><td class="numeric">${row[1]}</td></tr>`)
         .join('');
-
-      const segmentRows = pipesForTotals
-        .map((segment) => {
-          let install = Number.NaN;
-          let purge = Number.NaN;
-          let label = segment.dn;
-          let volumePerMeter = Number.NaN;
-          try {
-            const segmentEntry = getPipeSegment(segment.dn);
-            install = pipeInstallVolume(segment.dn, segment.length_m);
-            purge = pipePurgeVolume(segment.dn, segment.length_m, multiplier);
-            label = segmentEntry.label;
-            volumePerMeter = segmentEntry.volumePerMeter_m3;
-          } catch (error) {
-            console.error('Segment breakdown calculation failed', error);
-          }
-          return `
-            <tr>
-              <td>${label}</td>
-              <td class="numeric">${formatNumber(segment.length_m, 2)}</td>
-              <td class="numeric">${formatVolume(volumePerMeter)}</td>
-              <td class="numeric">${formatVolume(install)}</td>
-              <td class="numeric">${formatVolume(purge)}</td>
-            </tr>
-          `;
-        })
-        .join('');
-
-      const purgeHoseRow = (() => {
-        if (!purgeHoseTotals) return '';
-        let purge = Number.NaN;
-        let label = purgeHoseTotals.dn;
-        let volumePerMeter = Number.NaN;
-        try {
-          const hoseEntry = getPipeSegment(purgeHoseTotals.dn);
-          purge = pipePurgeVolume(purgeHoseTotals.dn, purgeHoseTotals.length_m, multiplier);
-          label = hoseEntry.label;
-          volumePerMeter = hoseEntry.volumePerMeter_m3;
-        } catch (error) {
-          console.error('Purge hose breakdown calculation failed', error);
-        }
-        return `
-          <tr>
-            <td>${label}</td>
-            <td class="numeric">${formatNumber(purgeHoseTotals.length_m, 2)}</td>
-            <td class="numeric">${formatVolume(volumePerMeter)}</td>
-            <td class="numeric">${formatVolume(0)}</td>
-            <td class="numeric">${formatVolume(purge)}</td>
-          </tr>
-        `;
-      })();
-
-      segmentBody.innerHTML = segmentRows + purgeHoseRow;
 
       const meterRows = [
         {
@@ -754,7 +695,6 @@ function initialisePipeCalculator() {
       summary.innerHTML = `<p>Unable to calculate volumes: ${error instanceof Error ? error.message : 'Unknown error'}.</p>`;
       installationBody.innerHTML = '';
       purgeBody.innerHTML = '';
-      segmentBody.innerHTML = '';
       meterBody.innerHTML = '';
       console.error('Volume calculation failed', error);
     }
