@@ -399,6 +399,16 @@ input.numeric-readonly:focus {
   gap: 1rem;
 }
 
+.meter-selection-caption {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: -0.25rem;
+}
+
+.meter-selection-caption + .data-table {
+  margin-top: 0.25rem;
+}
+
 @media (min-width: 760px) {
   .meter-selection-wrapper {
     grid-template-columns: repeat(2, minmax(0, 1fr));
