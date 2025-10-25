@@ -102,7 +102,6 @@
               <tr>
                 <th scope="col">Purge hose size</th>
                 <th scope="col">Length (m)</th>
-                <th scope="col">Installation volume (m³)</th>
                 <th scope="col">Purge volume (m³)</th>
                 <th scope="col" aria-hidden="true"></th>
               </tr>
@@ -117,7 +116,6 @@
                     <label class="sr-only" for="purge-hose-length">Purge hose length</label>
                     <input id="purge-hose-length" type="number" min="0" step="0.01" placeholder="0.00" />
                   </td>
-                  <td class="numeric" aria-label="Purge hose installation volume">N/A</td>
                   <td class="numeric">
                     <input
                       id="purge-hose-purge-volume"
@@ -139,7 +137,6 @@
         <div class="pipe-inputs">
           <div class="meter-selection-wrapper">
             <div class="test-setup-block" aria-live="polite">
-              <div id="diaphragm-meter-allowances-caption" class="meter-selection-caption">Diaphragm valve allowances</div>
               <table class="data-table meter-table">
                 <thead>
                   <tr>
@@ -154,14 +151,13 @@
                       <label class="sr-only" for="diaphragm-meter-select">Diaphragm meter selection</label>
                       <select id="diaphragm-meter-select"></select>
                     </td>
-                    <td id="diaphragm-meter-install" class="numeric">—</td>
-                    <td id="diaphragm-meter-purge" class="numeric">—</td>
+                    <td id="diaphragm-meter-install" class="numeric"></td>
+                    <td id="diaphragm-meter-purge" class="numeric"></td>
                   </tr>
                 </tbody>
               </table>
             </div>
             <div class="test-setup-block" aria-live="polite">
-              <div id="rotary-meter-allowances-caption" class="meter-selection-caption">Rotary valve allowances</div>
               <table class="data-table meter-table">
                 <thead>
                   <tr>
@@ -176,8 +172,8 @@
                       <label class="sr-only" for="rotary-meter-select">Rotary meter selection</label>
                       <select id="rotary-meter-select"></select>
                     </td>
-                    <td id="rotary-meter-install" class="numeric">—</td>
-                    <td id="rotary-meter-purge" class="numeric">—</td>
+                    <td id="rotary-meter-install" class="numeric"></td>
+                    <td id="rotary-meter-purge" class="numeric"></td>
                   </tr>
                 </tbody>
               </table>
@@ -201,11 +197,12 @@
           Add at least one pipe segment to calculate installation and purge volumes.
         </div>
         <div class="test-setup-preview">
-          <div class="test-setup-block">
+          <div class="test-setup-block test-setup-block--full">
             <table class="data-table">
+              <caption>Table 12 – Maximum purge flow reference</caption>
               <thead>
                 <tr>
-                  <th scope="col">Table 12 – Maximum purge flow reference</th>
+                  <th scope="col">Pipe diameter to be purged</th>
                   <th scope="col" class="numeric">Maximum purge flow rate (m³/h)</th>
                   <th scope="col" class="numeric">Purge time at maximum flow (seconds)</th>
                 </tr>
@@ -213,7 +210,7 @@
               <tbody>
                 <tr>
                   <td>
-                    <label for="purge-pipe-diameter">Pipe diameter to be purged</label>
+                    <label class="sr-only" for="purge-pipe-diameter">Pipe diameter to be purged</label>
                     <select id="purge-pipe-diameter"></select>
                   </td>
                   <td class="numeric">
