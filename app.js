@@ -19,21 +19,40 @@ import {
 } from './gasSizing.js';
 
 const STORAGE_KEY = 'igem-up1-procedure';
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.4.0';
 const INPUT_SELECTOR =
   'input[type="text"], input[type="number"], input[type="date"], input[type="hidden"], textarea, select, input[type="checkbox"]';
 
 const registerServiceWorker = () => {
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker
-        .register('./sw.js')
-        .catch((error) => console.error('Service worker registration failed:', error));
-    });
-  }
+  if (!('serviceWorker' in navigator)) return;
+
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing) return;
+    refreshing = true;
+    window.location.reload();
+  });
+
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('./sw.js', { updateViaCache: 'none' })
+      .then((registration) => {
+        if (registration && typeof registration.update === 'function') {
+          registration.update();
+        }
+      })
+      .catch((error) => console.error('Service worker registration failed:', error));
+  });
 };
 
 const inputs = Array.from(document.querySelectorAll(INPUT_SELECTOR));
+
+const shouldPersistInput = (input) => {
+  if (!input || !input.id) return false;
+  if (input.dataset.persist === 'never') return false;
+  if (input.readOnly && input.dataset.persist !== 'always') return false;
+  return true;
+};
 
 const dispatchDataUpdated = () => {
   document.dispatchEvent(new Event('procedure-data-updated'));
@@ -53,7 +72,9 @@ const setVersionInfo = () => {
 
 const applyInputData = (data = {}) => {
   inputs.forEach((input) => {
-    if (!input.id) return;
+    if (!input || !input.id) return;
+    if (input.dataset.persist === 'never') return;
+    if (input.readOnly && input.dataset.persist !== 'always') return;
     if (input.type === 'checkbox') {
       input.checked = Boolean(data[input.id]);
     } else if (Object.prototype.hasOwnProperty.call(data, input.id)) {
@@ -68,7 +89,7 @@ const applyInputData = (data = {}) => {
 const serialiseFormData = () => {
   const data = {};
   inputs.forEach((input) => {
-    if (!input.id) return;
+    if (!shouldPersistInput(input)) return;
     if (input.type === 'checkbox') {
       data[input.id] = input.checked;
     } else {
@@ -282,13 +303,12 @@ function initialisePipeCalculator() {
   const summary = document.getElementById('pipe-volume-summary');
   const installationBody = document.getElementById('installation-breakdown-body');
   const purgeBody = document.getElementById('purge-breakdown-body');
-  const meterBody = document.getElementById('meter-breakdown-body');
+  const meterBody = document.getElementById('meter-allowances-body');
   const hiddenField = document.getElementById('pipe-configuration');
-  const systemVolumeInput = document.getElementById('volume');
-  const purgeVolumeInput = document.getElementById('purge-volume');
+  const systemVolumeInput = document.getElementById('calculated-system-volume');
+  const purgeVolumeInput = document.getElementById('calculated-purge-volume');
   const purgeHoseSelect = document.getElementById('purge-hose-size');
   const purgeHoseLengthInput = document.getElementById('purge-hose-length');
-  const purgeHoseInstallInput = document.getElementById('purge-hose-install-volume');
   const purgeHosePurgeInput = document.getElementById('purge-hose-purge-volume');
 
   if (
@@ -305,7 +325,6 @@ function initialisePipeCalculator() {
     !systemVolumeInput ||
     !purgeHoseSelect ||
     !purgeHoseLengthInput ||
-    !purgeHoseInstallInput ||
     !purgeHosePurgeInput
   ) {
     return;
@@ -429,7 +448,6 @@ function initialisePipeCalculator() {
         purgeVolume = Number.NaN;
       }
     }
-    purgeHoseInstallInput.value = formatVolume(0);
     purgeHosePurgeInput.value = formatVolume(purgeVolume);
   };
 
@@ -658,7 +676,10 @@ function initialisePipeCalculator() {
           formatVolume(meterPurgeTotal)
         ],
         ['Step 9 – Total purge before fittings = Step 6 + Step 7 + Step 8', formatVolume(purgeBeforeFittings)],
-        ['Step 10 – Fittings allowance (10% of Step 9)', formatVolume(purgeFittingsAllowance)],
+        [
+          `Step 10 – Fittings allowance (10% of Step 9 × ${formatNumber(multiplier, 2)})`,
+          formatVolume(purgeFittingsAllowance)
+        ],
         ['Step 11 – Total purge volume = Step 9 + Step 10', formatVolume(totals.purgeVolume_m3)]
       ];
       purgeBody.innerHTML = purgeRows
@@ -823,7 +844,7 @@ function initialisePurgeHelpers() {
   const purgePipeSelect = document.getElementById('purge-pipe-diameter');
   const purgeFlowInput = document.getElementById('purge-max-flow-rate');
   const purgeTimeInput = document.getElementById('purge-time-minutes');
-  const purgeVolumeInput = document.getElementById('purge-volume');
+  const purgeVolumeInput = document.getElementById('calculated-purge-volume');
   const gasTypeSelect = document.getElementById('gas-type');
   const f3GasInput = document.getElementById('operating-factor-f3-gas');
   const f3N2Input = document.getElementById('operating-factor-f3-n2');
@@ -1172,7 +1193,7 @@ if (importInput) {
 }
 
 inputs.forEach((input) => {
-  if (!input) return;
+  if (!input || !shouldPersistInput(input)) return;
   const primaryEvent = input.type === 'checkbox' || input.tagName === 'SELECT' ? 'change' : 'input';
   input.addEventListener(primaryEvent, saveState);
   if (primaryEvent === 'change') {
