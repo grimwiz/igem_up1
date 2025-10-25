@@ -377,18 +377,44 @@ details summary {
 
 input.numeric-readonly {
   width: 100%;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  border-radius: 6px;
-  padding: 0.35rem 0.5rem;
+  border: none;
+  border-radius: 0;
+  padding: 0.35rem 0.25rem;
   text-align: right;
-  background: #f9fafb;
+  background: var(--bg);
   font: inherit;
-  color: inherit;
+  color: var(--muted);
+  cursor: default;
 }
 
 input.numeric-readonly:focus {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(0, 94, 165, 0.25);
+  box-shadow: none;
+}
+
+.table-action-placeholder {
+  display: block;
+  width: 100%;
+  min-height: 2.25rem;
+}
+
+.meter-allowances {
+  grid-column: 1 / -1;
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 10px;
+  padding: 0.75rem;
+  display: grid;
+  gap: 0.5rem;
+  overflow-x: auto;
+}
+
+.meter-allowances h4 {
+  margin: 0;
+  color: var(--primary);
+}
+
+.meter-allowances-table {
+  min-width: 0;
 }
 
 .pipe-breakdown-table {

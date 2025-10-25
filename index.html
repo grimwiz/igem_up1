@@ -78,48 +78,6 @@
           </label>
           <input id="operating-pressure" type="number" min="0" step="0.1" />
         </div>
-        <div>
-          <label for="volume">
-            Estimated System Volume (m³)
-            <span
-              class="info-icon"
-              tabindex="0"
-              role="button"
-              aria-label="Explanation for system volume"
-              data-popover="Calculated automatically from pipe, meter and purge hose volumes with an additional 10% allowance for fittings. Used to determine hold and purge times."
-            ></span>
-          </label>
-          <input
-            id="volume"
-            type="text"
-            class="numeric-readonly"
-            inputmode="decimal"
-            readonly
-            placeholder="Calculated automatically"
-            value="0.0000"
-          />
-        </div>
-        <div>
-          <label for="purge-volume">
-            Total Purge Volume (m³)
-            <span
-              class="info-icon"
-              tabindex="0"
-              role="button"
-              aria-label="Explanation for purge volume"
-              data-popover="Calculated automatically from the pipe schedule using the IGEM/UP/1 purge multiplier. Used when estimating purge duration."
-            ></span>
-          </label>
-          <input
-            id="purge-volume"
-            type="text"
-            class="numeric-readonly"
-            inputmode="decimal"
-            readonly
-            placeholder="Calculated automatically"
-            value="0.0000"
-          />
-        </div>
       </div>
       <div class="calculation-block" id="pipe-volume-calculator">
         <h3>Pipe, meter and purge volume estimator</h3>
@@ -146,12 +104,13 @@
             <h4>Purge hose</h4>
             <table class="pipe-table">
               <thead>
-                <tr>
-                  <th scope="col">Hose size</th>
-                  <th scope="col">Length (m)</th>
-                  <th scope="col">Installation volume (m³)</th>
-                  <th scope="col">Purge volume (m³)</th>
-                </tr>
+              <tr>
+                <th scope="col">Hose size</th>
+                <th scope="col">Length (m)</th>
+                <th scope="col">Installation volume (m³)</th>
+                <th scope="col">Purge volume (m³)</th>
+                <th scope="col" aria-hidden="true"></th>
+              </tr>
               </thead>
               <tbody>
                 <tr>
@@ -163,16 +122,7 @@
                     <label class="sr-only" for="purge-hose-length">Purge hose length</label>
                     <input id="purge-hose-length" type="number" min="0" step="0.01" placeholder="0.00" />
                   </td>
-                  <td class="numeric">
-                    <input
-                      id="purge-hose-install-volume"
-                      type="text"
-                      class="numeric-readonly"
-                      inputmode="decimal"
-                      readonly
-                      aria-label="Purge hose installation volume"
-                    />
-                  </td>
+                  <td class="numeric" aria-label="Purge hose installation volume">N/A</td>
                   <td class="numeric">
                     <input
                       id="purge-hose-purge-volume"
@@ -182,6 +132,9 @@
                       readonly
                       aria-label="Purge hose purge volume"
                     />
+                  </td>
+                  <td aria-hidden="true">
+                    <span class="table-action-placeholder" aria-hidden="true"></span>
                   </td>
                 </tr>
               </tbody>
@@ -196,6 +149,20 @@
           <div>
             <label for="rotary-meter-select">Rotary meter (Table 3)</label>
             <select id="rotary-meter-select"></select>
+          </div>
+          <div class="meter-allowances" aria-live="polite">
+            <h4>Meter allowances</h4>
+            <table class="pipe-table meter-allowances-table">
+              <thead>
+                <tr>
+                  <th scope="col">Meter</th>
+                  <th scope="col">Type</th>
+                  <th scope="col">Install (m³)</th>
+                  <th scope="col">Purge (m³)</th>
+                </tr>
+              </thead>
+              <tbody id="meter-allowances-body"></tbody>
+            </table>
           </div>
           <div>
             <label for="purge-multiplier">
@@ -237,18 +204,6 @@
               </thead>
               <tbody id="purge-breakdown-body"></tbody>
             </table>
-            <h4>Meter allowances</h4>
-            <table class="pipe-table pipe-breakdown-table">
-              <thead>
-                <tr>
-                  <th scope="col">Meter</th>
-                  <th scope="col">Type</th>
-                  <th scope="col">Install (m³)</th>
-                  <th scope="col">Purge (m³)</th>
-                </tr>
-              </thead>
-              <tbody id="meter-breakdown-body"></tbody>
-            </table>
             <p>
               Cross-check these totals with the latest IGEM/UP/1 publication on the IGEM technical services site and guidance in
               Section 8 to confirm that the chosen approach still reflects the published standard before issuing the procedure.
@@ -256,6 +211,8 @@
           </div>
         </details>
         <input type="hidden" id="pipe-configuration" />
+        <input type="hidden" id="calculated-system-volume" data-persist="never" />
+        <input type="hidden" id="calculated-purge-volume" data-persist="never" />
       </div>
     </section>
 
