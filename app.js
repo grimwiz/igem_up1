@@ -179,6 +179,117 @@ const normaliseLength = (value) => {
   return Number.isFinite(numeric) && numeric >= 0 ? numeric : 0;
 };
 
+const formatMinutesValue = (value) => (Number.isFinite(value) ? formatNumber(value, 2) : '—');
+
+const updateTtdCalculations = () => {
+  const step11Source = document.getElementById('calculated-purge-volume');
+  const step11Display = document.getElementById('ttd-step11');
+  const roomVolumeInput = document.getElementById('ttd-room-volume');
+  const outputs = {
+    gasTypeA: document.getElementById('ttd-gas-type-a'),
+    gasTypeCD: document.getElementById('ttd-gas-type-cd'),
+    gasTypeAIn: document.getElementById('ttd-gas-type-a-in'),
+    n2TypeA: document.getElementById('ttd-n2-type-a'),
+    n2TypeCD: document.getElementById('ttd-n2-type-cd'),
+    n2TypeAIn: document.getElementById('ttd-n2-type-a-in')
+  };
+
+  if (!step11Display || !roomVolumeInput) {
+    return;
+  }
+
+  const step11Value = readNumber(step11Source);
+  updateReadOnlyInput(step11Display, Number.isFinite(step11Value) ? formatNumber(step11Value, 4) : '—');
+
+  const gaugeSelect = document.getElementById('gauge-choice');
+  const gasTypeSelect = document.getElementById('gas-type');
+
+  const gaugeEntry = gaugeSelect ? TABLE6_MAP[gaugeSelect.value] : null;
+  const grm = gaugeEntry && Number.isFinite(gaugeEntry.GRM) ? gaugeEntry.GRM : Number.NaN;
+
+  const gasKey = gasTypeSelect ? gasTypeSelect.value.toLowerCase() : '';
+  const gasFactors = gasKey ? F1_MAP[gasKey] : null;
+
+  const gasFactorGas = gasFactors && Number.isFinite(gasFactors?.gas) ? gasFactors.gas : Number.NaN;
+  const gasFactorN2 = gasFactors && Number.isFinite(gasFactors?.n2) ? gasFactors.n2 : Number.NaN;
+
+  const baseGas = Number.isFinite(step11Value) && Number.isFinite(grm) && Number.isFinite(gasFactorGas)
+    ? gasFactorGas * grm * step11Value
+    : Number.NaN;
+  const baseN2 = Number.isFinite(step11Value) && Number.isFinite(grm) && Number.isFinite(gasFactorN2)
+    ? gasFactorN2 * grm * step11Value
+    : Number.NaN;
+
+  const existingCdGas = Number.isFinite(baseGas) ? baseGas * 0.047 : Number.NaN;
+  const existingCdN2 = Number.isFinite(baseN2) ? baseN2 * 0.047 : Number.NaN;
+
+  const roomVolume = readNumber(roomVolumeInput);
+  const roomFactor = Number.isFinite(roomVolume) && roomVolume > 0 ? 1 / roomVolume : Number.NaN;
+
+  const inTypeAGas = Number.isFinite(baseGas) && Number.isFinite(roomFactor) ? baseGas * 2.8 * roomFactor : Number.NaN;
+  const inTypeAN2 = Number.isFinite(baseN2) && Number.isFinite(roomFactor) ? baseN2 * 2.8 * roomFactor : Number.NaN;
+
+  const setOutput = (element, value) => {
+    if (!element) return;
+    updateReadOnlyInput(element, formatMinutesValue(value));
+  };
+
+  setOutput(outputs.gasTypeA, baseGas);
+  setOutput(outputs.n2TypeA, baseN2);
+  setOutput(outputs.gasTypeCD, existingCdGas);
+  setOutput(outputs.n2TypeCD, existingCdN2);
+  setOutput(outputs.gasTypeAIn, inTypeAGas);
+  setOutput(outputs.n2TypeAIn, inTypeAN2);
+
+  const breakdownBody = document.getElementById('ttd-breakdown-body');
+  if (breakdownBody) {
+    const rows = [
+      {
+        label: 'Step 12 – Base TTD factor (gas) = F₁(gas) × GRM × Step 11',
+        gas: baseGas,
+        n2: Number.NaN
+      },
+      {
+        label: 'Step 13 – Base TTD factor (N₂) = F₁(N₂) × GRM × Step 11',
+        gas: Number.NaN,
+        n2: baseN2
+      },
+      {
+        label: 'Step 14 – Existing Type C & D (gas) = Step 12 × 0.047',
+        gas: existingCdGas,
+        n2: Number.NaN
+      },
+      {
+        label: 'Step 15 – Existing Type C & D (N₂) = Step 13 × 0.047',
+        gas: Number.NaN,
+        n2: existingCdN2
+      },
+      {
+        label: 'Step 16 – Existing in Type A (gas) = Step 12 × 2.8 ÷ Room volume',
+        gas: inTypeAGas,
+        n2: Number.NaN
+      },
+      {
+        label: 'Step 17 – Existing in Type A (N₂) = Step 13 × 2.8 ÷ Room volume',
+        gas: Number.NaN,
+        n2: inTypeAN2
+      }
+    ];
+
+    breakdownBody.innerHTML = rows
+      .map(
+        (row) => `
+          <tr>
+            <td>${row.label}</td>
+            <td class="numeric">${formatMinutesValue(row.gas)}</td>
+            <td class="numeric">${formatMinutesValue(row.n2)}</td>
+          </tr>
+        `
+      )
+      .join('');
+  }
+};
+
 const formatReferenceValue = (value, key, decimalsOverride = null) => {
   if (value === null || value === undefined) return '—';
   if (typeof value === 'number') {
@@ -753,12 +864,15 @@ function initialisePipeCalculator() {
         .map((row) => `<tr><td>${row[0]}</td><td class="numeric">${row[1]}</td></tr>`)
         .join('');
 
+      updateTtdCalculations();
+
     } catch (error) {
       summary.innerHTML = `<p>Unable to calculate volumes: ${error instanceof Error ? error.message : 'Unknown error'}.</p>`;
       installationBody.innerHTML = '';
       purgeBody.innerHTML = '';
       resetMeterAllowanceTable(diaphragmAllowanceElements);
       resetMeterAllowanceTable(rotaryAllowanceElements);
+      updateTtdCalculations();
       console.error('Volume calculation failed', error);
     }
   };
@@ -896,6 +1010,7 @@ function initialisePurgeHelpers() {
   const gaugeRangeInput = document.getElementById('gauge-range');
   const gaugeGrmInput = document.getElementById('gauge-grm');
   const gaugeTtdInput = document.getElementById('gauge-ttd-max');
+  const roomVolumeInput = document.getElementById('ttd-room-volume');
 
   if (gasTypeSelect) {
     if (!gasTypeSelect.options.length) {
@@ -1015,6 +1130,8 @@ function initialisePurgeHelpers() {
         f3Entry && Number.isFinite(f3Entry.n2) ? formatNumber(f3Entry.n2, 3) : '—'
       );
     }
+
+    updateTtdCalculations();
   };
 
   if (gasTypeSelect) {
@@ -1039,17 +1156,26 @@ function initialisePurgeHelpers() {
         updateReadOnlyInput(gaugeRangeInput, '');
         updateReadOnlyInput(gaugeGrmInput, '');
         updateReadOnlyInput(gaugeTtdInput, '');
+        updateTtdCalculations();
         return;
       }
       updateReadOnlyInput(gaugeRangeInput, entry.range ?? '');
       updateReadOnlyInput(gaugeGrmInput, Number.isFinite(entry.GRM) ? formatNumber(entry.GRM, 1) : '—');
       updateReadOnlyInput(gaugeTtdInput, Number.isFinite(entry.TTD_Max) ? formatNumber(entry.TTD_Max, 0) : '—');
+      updateTtdCalculations();
     };
 
     gaugeSelect.addEventListener('change', updateGaugeOutputs);
     document.addEventListener('procedure-data-updated', updateGaugeOutputs);
     updateGaugeOutputs();
   }
+
+  if (roomVolumeInput) {
+    roomVolumeInput.addEventListener('input', updateTtdCalculations);
+  }
+
+  document.addEventListener('procedure-data-updated', updateTtdCalculations);
+  updateTtdCalculations();
 }
 
 function calculateTestPlan() {
