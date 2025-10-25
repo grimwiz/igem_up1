@@ -362,12 +362,7 @@ details summary {
 .purge-hose-wrapper {
   display: grid;
   gap: 0.75rem;
-}
-
-.purge-hose-wrapper h4 {
-  margin: 0;
-  color: var(--primary);
-  font-size: 1.05rem;
+  margin-top: 1rem;
 }
 
 .pipe-table td.numeric,
@@ -400,60 +395,49 @@ input.numeric-readonly:focus {
 
 .meter-selection-wrapper {
   grid-column: 1 / -1;
+  display: grid;
+  gap: 1rem;
 }
 
-.meter-selection-table {
+@media (min-width: 760px) {
+  .meter-selection-wrapper {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.data-table {
   width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  background: rgba(0, 0, 0, 0.03);
-  border-radius: 10px;
-  overflow: hidden;
+  border-collapse: collapse;
 }
 
-.meter-selection-table caption {
+.data-table th,
+.data-table td {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 0.6rem 0.75rem;
   text-align: left;
-  font-weight: 600;
-  color: var(--primary);
-  padding: 0.6rem 0.85rem;
-}
-
-.meter-selection-table thead th {
-  background: rgba(0, 0, 0, 0.05);
-  text-align: left;
-  font-weight: 600;
-  padding: 0.5rem 0.85rem;
-}
-
-.meter-selection-table tbody th,
-.meter-selection-table tbody td {
-  padding: 0.6rem 0.85rem;
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
   vertical-align: middle;
 }
 
-.meter-selection-table tbody tr:first-child th,
-.meter-selection-table tbody tr:first-child td {
-  border-top: none;
-}
-
-.meter-selection-table tbody th {
+.data-table thead th {
+  background: #f1f5f9;
   font-weight: 600;
+  color: var(--primary);
 }
 
-.meter-selection-table td.numeric {
+.data-table td.numeric,
+.data-table th.numeric {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-.meter-selection-table select {
+.meter-table select {
   width: 100%;
 }
 
-.meter-selection-caption {
-  margin-top: 0.35rem;
-  font-size: 0.85rem;
-  color: var(--muted);
+.test-setup-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .pipe-breakdown-table {

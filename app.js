@@ -202,7 +202,7 @@ const updateTtdCalculations = () => {
   updateReadOnlyInput(step11Display, Number.isFinite(step11Value) ? formatNumber(step11Value, 4) : '—');
 
   const gaugeSelect = document.getElementById('gauge-choice');
-  const gasTypeSelect = document.getElementById('gas-type');
+  const gasTypeSelect = document.getElementById('gas-type-f1');
 
   const gaugeEntry = gaugeSelect ? TABLE6_MAP[gaugeSelect.value] : null;
   const grm = gaugeEntry && Number.isFinite(gaugeEntry.GRM) ? gaugeEntry.GRM : Number.NaN;
@@ -1001,7 +1001,8 @@ function initialisePurgeHelpers() {
   const purgeFlowInput = document.getElementById('purge-max-flow-rate');
   const purgeTimeInput = document.getElementById('purge-time-minutes');
   const purgeVolumeInput = document.getElementById('calculated-purge-volume');
-  const gasTypeSelect = document.getElementById('gas-type');
+  const gasTypeSelectF1 = document.getElementById('gas-type-f1');
+  const gasTypeSelectF3 = document.getElementById('gas-type-f3');
   const f1GasInput = document.getElementById('gas-factor-f1-gas');
   const f1N2Input = document.getElementById('gas-factor-f1-n2');
   const f3GasInput = document.getElementById('operating-factor-f3-gas');
@@ -1012,19 +1013,19 @@ function initialisePurgeHelpers() {
   const gaugeTtdInput = document.getElementById('gauge-ttd-max');
   const roomVolumeInput = document.getElementById('ttd-room-volume');
 
-  if (gasTypeSelect) {
-    if (!gasTypeSelect.options.length) {
-      gasTypeSelect.innerHTML = GAS_TYPE_OPTIONS.map(
+  const ensureGasSelectOptions = (select) => {
+    if (!select) return;
+    if (!select.options.length) {
+      select.innerHTML = GAS_TYPE_OPTIONS.map(
         (option) => `<option value="${option.value}">${option.label}</option>`
       ).join('');
     }
-
     const normaliseGasSelection = () => {
-      if (!gasTypeSelect) return;
-      const currentValue = gasTypeSelect.value;
+      if (!select) return;
+      const currentValue = select.value;
       if (!currentValue) {
         if (GAS_TYPE_OPTIONS.length) {
-          gasTypeSelect.value = GAS_TYPE_OPTIONS[0].value;
+          select.value = GAS_TYPE_OPTIONS[0].value;
         }
         return;
       }
@@ -1034,24 +1035,27 @@ function initialisePurgeHelpers() {
         (option) => option.value.toLowerCase() === currentValue.toLowerCase()
       );
       if (normalisedMatch) {
-        gasTypeSelect.value = normalisedMatch.value;
+        select.value = normalisedMatch.value;
         return;
       }
       const labelMatch = GAS_TYPE_OPTIONS.find(
         (option) => option.label.toLowerCase() === currentValue.toLowerCase()
       );
       if (labelMatch) {
-        gasTypeSelect.value = labelMatch.value;
+        select.value = labelMatch.value;
         return;
       }
       if (GAS_TYPE_OPTIONS.length) {
-        gasTypeSelect.value = GAS_TYPE_OPTIONS[0].value;
+        select.value = GAS_TYPE_OPTIONS[0].value;
       }
     };
 
     normaliseGasSelection();
     document.addEventListener('procedure-data-updated', normaliseGasSelection);
-  }
+  };
+
+  ensureGasSelectOptions(gasTypeSelectF1);
+  ensureGasSelectOptions(gasTypeSelectF3);
 
   if (purgePipeSelect && purgeFlowInput && purgeTimeInput) {
     const purgePipeOptions = Object.keys(TABLE12_MAP).sort((a, b) =>
@@ -1102,9 +1106,10 @@ function initialisePurgeHelpers() {
   const normaliseGasTypeKey = (value) => String(value || '').toLowerCase();
 
   const updateGasFactors = () => {
-    const gasKey = normaliseGasTypeKey(gasTypeSelect ? gasTypeSelect.value : null);
-    const f1Entry = gasKey ? F1_MAP[gasKey] : null;
-    const f3Entry = gasKey ? F3_MAP[gasKey] : null;
+    const gasKeyF1 = normaliseGasTypeKey(gasTypeSelectF1 ? gasTypeSelectF1.value : null);
+    const gasKeyF3 = normaliseGasTypeKey(gasTypeSelectF3 ? gasTypeSelectF3.value : null);
+    const f1Entry = gasKeyF1 ? F1_MAP[gasKeyF1] : null;
+    const f3Entry = gasKeyF3 ? F3_MAP[gasKeyF3] : null;
 
     if (f1GasInput) {
       updateReadOnlyInput(
@@ -1134,9 +1139,13 @@ function initialisePurgeHelpers() {
     updateTtdCalculations();
   };
 
-  if (gasTypeSelect) {
-    gasTypeSelect.addEventListener('change', updateGasFactors);
-    gasTypeSelect.addEventListener('input', updateGasFactors);
+  if (gasTypeSelectF1) {
+    gasTypeSelectF1.addEventListener('change', updateGasFactors);
+    gasTypeSelectF1.addEventListener('input', updateGasFactors);
+  }
+  if (gasTypeSelectF3) {
+    gasTypeSelectF3.addEventListener('change', updateGasFactors);
+    gasTypeSelectF3.addEventListener('input', updateGasFactors);
   }
   document.addEventListener('procedure-data-updated', updateGasFactors);
   updateGasFactors();
@@ -1189,7 +1198,7 @@ function calculateTestPlan() {
   const fillRateInput = document.getElementById('test-fill-rate');
   const startTempInput = document.getElementById('test-temp-start');
   const endTempInput = document.getElementById('test-temp-end');
-  const gasTypeInput = document.getElementById('gas-type');
+  const gasTypeInput = document.getElementById('gas-type-f1');
 
   let designPressure = readNumber(designInput);
   const operatingPressure = readNumber(operatingInput);

@@ -97,11 +97,10 @@
           </table>
           <button type="button" id="add-pipe-row" class="secondary-button">Add pipe segment</button>
           <div class="purge-hose-wrapper">
-            <h4>Purge hose</h4>
             <table class="pipe-table">
               <thead>
               <tr>
-                <th scope="col">Hose size</th>
+                <th scope="col">Purge hose size</th>
                 <th scope="col">Length (m)</th>
                 <th scope="col">Installation volume (m³)</th>
                 <th scope="col">Purge volume (m³)</th>
@@ -139,45 +138,48 @@
         </div>
         <div class="pipe-inputs">
           <div class="meter-selection-wrapper">
-            <table class="meter-selection-table" aria-live="polite">
-              <caption>Valve allowances</caption>
-              <thead>
-                <tr>
-                  <th scope="col">Valve</th>
-                  <th scope="col">Selection</th>
-                  <th scope="col" class="numeric">Installation allowance (m³)</th>
-                  <th scope="col" class="numeric">Purge allowance (m³)</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <th scope="row">
-                    <label for="diaphragm-meter-select">Diaphragm valve (Table 3)</label>
-                    <div id="diaphragm-meter-allowances-caption" class="meter-selection-caption">
-                      Diaphragm valve allowances
-                    </div>
-                  </th>
-                  <td>
-                    <select id="diaphragm-meter-select"></select>
-                  </td>
-                  <td id="diaphragm-meter-install" class="numeric">—</td>
-                  <td id="diaphragm-meter-purge" class="numeric">—</td>
-                </tr>
-                <tr>
-                  <th scope="row">
-                    <label for="rotary-meter-select">Rotary valve (Table 3)</label>
-                    <div id="rotary-meter-allowances-caption" class="meter-selection-caption">
-                      Rotary valve allowances
-                    </div>
-                  </th>
-                  <td>
-                    <select id="rotary-meter-select"></select>
-                  </td>
-                  <td id="rotary-meter-install" class="numeric">—</td>
-                  <td id="rotary-meter-purge" class="numeric">—</td>
-                </tr>
-              </tbody>
-            </table>
+            <div class="test-setup-block" aria-live="polite">
+              <table class="data-table meter-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Diaphragm meter</th>
+                    <th scope="col" class="numeric">Installation allowance (m³)</th>
+                    <th scope="col" class="numeric">Purge allowance (m³)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>
+                      <label class="sr-only" for="diaphragm-meter-select">Diaphragm meter selection</label>
+                      <select id="diaphragm-meter-select"></select>
+                    </td>
+                    <td id="diaphragm-meter-install" class="numeric">—</td>
+                    <td id="diaphragm-meter-purge" class="numeric">—</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="test-setup-block" aria-live="polite">
+              <table class="data-table meter-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Rotary meter</th>
+                    <th scope="col" class="numeric">Installation allowance (m³)</th>
+                    <th scope="col" class="numeric">Purge allowance (m³)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>
+                      <label class="sr-only" for="rotary-meter-select">Rotary meter selection</label>
+                      <select id="rotary-meter-select"></select>
+                    </td>
+                    <td id="rotary-meter-install" class="numeric">—</td>
+                    <td id="rotary-meter-purge" class="numeric">—</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
           <div>
             <label for="purge-multiplier">
@@ -197,78 +199,119 @@
           Add at least one pipe segment to calculate installation and purge volumes.
         </div>
         <div class="test-setup-preview">
-          <table class="test-setup-table test-setup-matrix">
-            <thead>
-              <tr>
-                <th scope="col">Table 12 – Maximum purge flow reference</th>
-                <th scope="col">Table 6 – Gauge selection</th>
-                <th scope="col">Fuel type factors</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>
-                  <label for="purge-pipe-diameter">Pipe diameter to be purged (Table 12)</label>
-                  <select id="purge-pipe-diameter"></select>
-                </td>
-                <td>
-                  <label for="gauge-choice">Gauge choice (Table 6)</label>
-                  <select id="gauge-choice"></select>
-                </td>
-                <td>
-                  <label for="gas-type">Gas Type</label>
-                  <select id="gas-type"></select>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <label for="purge-max-flow-rate">Maximum purge flow rate (m³/h)</label>
-                  <input id="purge-max-flow-rate" type="text" class="numeric-readonly" readonly placeholder="Auto" />
-                </td>
-                <td>
-                  <label for="gauge-range">Gauge range</label>
-                  <input id="gauge-range" type="text" class="numeric-readonly" readonly placeholder="Auto" />
-                </td>
-                <td>
-                  <label for="gas-factor-f1-gas">Gas factor F₁ (gas purge)</label>
-                  <input id="gas-factor-f1-gas" type="text" class="numeric-readonly" readonly placeholder="Auto" />
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <label for="purge-time-minutes">Purge time at maximum flow (seconds)</label>
-                  <input id="purge-time-minutes" type="text" class="numeric-readonly" readonly placeholder="Auto" />
-                </td>
-                <td>
-                  <label for="gauge-grm">Gauge reading multiplier (GRM)</label>
-                  <input id="gauge-grm" type="text" class="numeric-readonly" readonly placeholder="Auto" />
-                </td>
-                <td>
-                  <label for="gas-factor-f1-n2">Gas factor F₁ (nitrogen purge)</label>
-                  <input id="gas-factor-f1-n2" type="text" class="numeric-readonly" readonly placeholder="Auto" />
-                </td>
-              </tr>
-              <tr>
-                <td aria-hidden="true" class="table-placeholder"></td>
-                <td>
-                  <label for="gauge-ttd-max">TTD max (minutes)</label>
-                  <input id="gauge-ttd-max" type="text" class="numeric-readonly" readonly placeholder="Auto" />
-                </td>
-                <td>
-                  <label for="operating-factor-f3-gas">Operating factor f₃ (gas service)</label>
-                  <input id="operating-factor-f3-gas" type="text" class="numeric-readonly" readonly placeholder="Auto" />
-                </td>
-              </tr>
-              <tr>
-                <td aria-hidden="true" class="table-placeholder"></td>
-                <td aria-hidden="true" class="table-placeholder"></td>
-                <td>
-                  <label for="operating-factor-f3-n2">Operating factor f₃ (nitrogen purge)</label>
-                  <input id="operating-factor-f3-n2" type="text" class="numeric-readonly" readonly placeholder="Auto" />
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <div class="test-setup-block">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th scope="col">Table 12 – Maximum purge flow reference</th>
+                  <th scope="col" class="numeric">Maximum purge flow rate (m³/h)</th>
+                  <th scope="col" class="numeric">Purge time at maximum flow (seconds)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <label for="purge-pipe-diameter">Pipe diameter to be purged</label>
+                    <select id="purge-pipe-diameter"></select>
+                  </td>
+                  <td class="numeric">
+                    <label class="sr-only" for="purge-max-flow-rate">Maximum purge flow rate (m³/h)</label>
+                    <input id="purge-max-flow-rate" type="text" class="numeric-readonly" readonly placeholder="Auto" />
+                  </td>
+                  <td class="numeric">
+                    <label class="sr-only" for="purge-time-minutes">Purge time at maximum flow (seconds)</label>
+                    <input id="purge-time-minutes" type="text" class="numeric-readonly" readonly placeholder="Auto" />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="test-setup-block">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th scope="col">Table 6 – Gauge selection</th>
+                  <th scope="col" class="numeric">Gauge range (mbar)</th>
+                  <th scope="col" class="numeric">Gauge reading multiplier (GRM)</th>
+                  <th scope="col" class="numeric">TTD max (minutes)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <label for="gauge-choice">Gauge choice</label>
+                    <select id="gauge-choice"></select>
+                  </td>
+                  <td class="numeric">
+                    <label class="sr-only" for="gauge-range">Gauge range (mbar)</label>
+                    <input id="gauge-range" type="text" class="numeric-readonly" readonly placeholder="Auto" />
+                  </td>
+                  <td class="numeric">
+                    <label class="sr-only" for="gauge-grm">Gauge reading multiplier (GRM)</label>
+                    <input id="gauge-grm" type="text" class="numeric-readonly" readonly placeholder="Auto" />
+                  </td>
+                  <td class="numeric">
+                    <label class="sr-only" for="gauge-ttd-max">TTD max (minutes)</label>
+                    <input id="gauge-ttd-max" type="text" class="numeric-readonly" readonly placeholder="Auto" />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="test-setup-block">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th scope="col">Fuel type factors – F₁ reference</th>
+                  <th scope="col" class="numeric">Gas factor F₁ (gas purge)</th>
+                  <th scope="col" class="numeric">Gas factor F₁ (nitrogen purge)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <label for="gas-type-f1">Fuel selection for F₁</label>
+                    <select id="gas-type-f1"></select>
+                  </td>
+                  <td class="numeric">
+                    <label class="sr-only" for="gas-factor-f1-gas">Gas factor F₁ (gas purge)</label>
+                    <input id="gas-factor-f1-gas" type="text" class="numeric-readonly" readonly placeholder="Auto" />
+                  </td>
+                  <td class="numeric">
+                    <label class="sr-only" for="gas-factor-f1-n2">Gas factor F₁ (nitrogen purge)</label>
+                    <input id="gas-factor-f1-n2" type="text" class="numeric-readonly" readonly placeholder="Auto" />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="test-setup-block">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th scope="col">Fuel type factors – f₃ reference</th>
+                  <th scope="col" class="numeric">Operating factor f₃ (gas service)</th>
+                  <th scope="col" class="numeric">Operating factor f₃ (nitrogen purge)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <label for="gas-type-f3">Fuel selection for f₃</label>
+                    <select id="gas-type-f3"></select>
+                  </td>
+                  <td class="numeric">
+                    <label class="sr-only" for="operating-factor-f3-gas">Operating factor f₃ (gas service)</label>
+                    <input id="operating-factor-f3-gas" type="text" class="numeric-readonly" readonly placeholder="Auto" />
+                  </td>
+                  <td class="numeric">
+                    <label class="sr-only" for="operating-factor-f3-n2">Operating factor f₃ (nitrogen purge)</label>
+                    <input id="operating-factor-f3-n2" type="text" class="numeric-readonly" readonly placeholder="Auto" />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
           <div class="ttd-panel">
             <h4>Time to discard (TTD) estimates</h4>
             <p class="ttd-panel-description">
