@@ -398,13 +398,11 @@ input.numeric-readonly:focus {
   min-height: 2.25rem;
 }
 
-.meter-input {
-  display: grid;
-  gap: 0.5rem;
-  align-content: start;
+.meter-selection-wrapper {
+  grid-column: 1 / -1;
 }
 
-.meter-allowance-table {
+.meter-selection-table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
@@ -413,30 +411,49 @@ input.numeric-readonly:focus {
   overflow: hidden;
 }
 
-.meter-allowance-table caption {
+.meter-selection-table caption {
   text-align: left;
   font-weight: 600;
   color: var(--primary);
-  padding: 0.5rem 0.75rem;
+  padding: 0.6rem 0.85rem;
 }
 
-.meter-allowance-table th,
-.meter-allowance-table td {
-  padding: 0.4rem 0.75rem;
-}
-
-.meter-allowance-table th {
+.meter-selection-table thead th {
+  background: rgba(0, 0, 0, 0.05);
   text-align: left;
-  font-weight: 500;
+  font-weight: 600;
+  padding: 0.5rem 0.85rem;
 }
 
-.meter-allowance-table tr + tr th,
-.meter-allowance-table tr + tr td {
+.meter-selection-table tbody th,
+.meter-selection-table tbody td {
+  padding: 0.6rem 0.85rem;
   border-top: 1px solid rgba(0, 0, 0, 0.08);
+  vertical-align: middle;
 }
 
-.meter-allowance-table td.numeric {
+.meter-selection-table tbody tr:first-child th,
+.meter-selection-table tbody tr:first-child td {
+  border-top: none;
+}
+
+.meter-selection-table tbody th {
+  font-weight: 600;
+}
+
+.meter-selection-table td.numeric {
   text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.meter-selection-table select {
+  width: 100%;
+}
+
+.meter-selection-caption {
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--muted);
 }
 
 .pipe-breakdown-table {
