@@ -7,6 +7,7 @@ import {
   TABLE6,
   TABLE6_MAP,
   TABLE12_MAP,
+  F1_MAP,
   F3_MAP,
   computeTotals,
   DEFAULT_PURGE_MULTIPLIER,
@@ -722,11 +723,17 @@ function initialisePipeCalculator() {
         .map((row) => `<tr><td>${row[0]}</td><td class="numeric">${row[1]}</td></tr>`)
         .join('');
 
+      const defaultMultiplierLabel = formatNumber(DEFAULT_PURGE_MULTIPLIER, 2);
+      const step6Label =
+        multiplier === DEFAULT_PURGE_MULTIPLIER
+          ? `Step 6 – Pipe purge contribution (Step 1 × ${defaultMultiplierLabel})`
+          : `Step 6 – Pipe purge contribution (Step 1 × ${defaultMultiplierLabel}; override ${formatNumber(
+              multiplier,
+              2
+            )})`;
+
       const purgeRows = [
-        [
-          `Step 6 – Pipe purge contribution (length × volume/m × ${formatNumber(multiplier, 2)})`,
-          formatVolume(pipePurgeTotal)
-        ],
+        [step6Label, formatVolume(pipePurgeTotal)],
         [
           `Step 7 – Purge hose purge contribution (length × volume/m × ${formatNumber(multiplier, 2)})`,
           formatVolume(purgeHosePurge)
@@ -739,10 +746,7 @@ function initialisePipeCalculator() {
           formatVolume(meterPurgeTotal)
         ],
         ['Step 9 – Total purge before fittings = Step 6 + Step 7 + Step 8', formatVolume(purgeBeforeFittings)],
-        [
-          `Step 10 – Fittings allowance (10% of Step 6 × ${formatNumber(multiplier, 2)})`,
-          formatVolume(purgeFittingsAllowance)
-        ],
+        [`Step 10 – Fittings allowance (10% of Step 6 × 1.50)`, formatVolume(purgeFittingsAllowance)],
         ['Step 11 – Total purge volume = Step 9 + Step 10', formatVolume(totals.purgeVolume_m3)]
       ];
       purgeBody.innerHTML = purgeRows
@@ -884,6 +888,8 @@ function initialisePurgeHelpers() {
   const purgeTimeInput = document.getElementById('purge-time-minutes');
   const purgeVolumeInput = document.getElementById('calculated-purge-volume');
   const gasTypeSelect = document.getElementById('gas-type');
+  const f1GasInput = document.getElementById('gas-factor-f1-gas');
+  const f1N2Input = document.getElementById('gas-factor-f1-n2');
   const f3GasInput = document.getElementById('operating-factor-f3-gas');
   const f3N2Input = document.getElementById('operating-factor-f3-n2');
   const gaugeSelect = document.getElementById('gauge-choice');
@@ -978,28 +984,45 @@ function initialisePurgeHelpers() {
     updatePurgeOutputs();
   }
 
-  if (f3GasInput && f3N2Input) {
-    const normaliseGasTypeKey = (value) => String(value || '').toLowerCase();
+  const normaliseGasTypeKey = (value) => String(value || '').toLowerCase();
 
-    const updateOperatingFactors = () => {
-      const gasKey = normaliseGasTypeKey(gasTypeSelect ? gasTypeSelect.value : null);
-      const entry = gasKey ? F3_MAP[gasKey] : null;
-      if (!entry) {
-        updateReadOnlyInput(f3GasInput, '—');
-        updateReadOnlyInput(f3N2Input, '—');
-        return;
-      }
-      updateReadOnlyInput(f3GasInput, formatNumber(entry.gas, 3));
-      updateReadOnlyInput(f3N2Input, formatNumber(entry.n2, 3));
-    };
+  const updateGasFactors = () => {
+    const gasKey = normaliseGasTypeKey(gasTypeSelect ? gasTypeSelect.value : null);
+    const f1Entry = gasKey ? F1_MAP[gasKey] : null;
+    const f3Entry = gasKey ? F3_MAP[gasKey] : null;
 
-    if (gasTypeSelect) {
-      gasTypeSelect.addEventListener('change', updateOperatingFactors);
-      gasTypeSelect.addEventListener('input', updateOperatingFactors);
+    if (f1GasInput) {
+      updateReadOnlyInput(
+        f1GasInput,
+        f1Entry && Number.isFinite(f1Entry.gas) ? formatNumber(f1Entry.gas, 1) : '—'
+      );
     }
-    document.addEventListener('procedure-data-updated', updateOperatingFactors);
-    updateOperatingFactors();
+    if (f1N2Input) {
+      updateReadOnlyInput(
+        f1N2Input,
+        f1Entry && Number.isFinite(f1Entry.n2) ? formatNumber(f1Entry.n2, 1) : '—'
+      );
+    }
+    if (f3GasInput) {
+      updateReadOnlyInput(
+        f3GasInput,
+        f3Entry && Number.isFinite(f3Entry.gas) ? formatNumber(f3Entry.gas, 3) : '—'
+      );
+    }
+    if (f3N2Input) {
+      updateReadOnlyInput(
+        f3N2Input,
+        f3Entry && Number.isFinite(f3Entry.n2) ? formatNumber(f3Entry.n2, 3) : '—'
+      );
+    }
+  };
+
+  if (gasTypeSelect) {
+    gasTypeSelect.addEventListener('change', updateGasFactors);
+    gasTypeSelect.addEventListener('input', updateGasFactors);
   }
+  document.addEventListener('procedure-data-updated', updateGasFactors);
+  updateGasFactors();
 
   if (gaugeSelect && gaugeRangeInput && gaugeGrmInput && gaugeTtdInput) {
     if (!gaugeSelect.options.length) {
