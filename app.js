@@ -20,7 +20,7 @@ import {
 } from './gasSizing.js';
 
 const STORAGE_KEY = 'igem-up1-procedure';
-const APP_VERSION = '1.4.0';
+const APP_VERSION = '1.5.0';
 const INPUT_SELECTOR =
   'input[type="text"], input[type="number"], input[type="date"], input[type="hidden"], textarea, select, input[type="checkbox"]';
 
@@ -206,6 +206,18 @@ const formatRoomVolumeForLabel = (value) => {
   return formatNumber(value, decimals);
 };
 
+const highlightTtdAreaType = (selectedType) => {
+  const rows = document.querySelectorAll('[data-area-types]');
+  rows.forEach((row) => {
+    const areaTypes = (row.dataset.areaTypes || '')
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean);
+    const isActive = selectedType && areaTypes.includes(selectedType);
+    row.dataset.active = isActive ? 'true' : 'false';
+  });
+};
+
 const updateTtdCalculations = () => {
   const step5Source = document.getElementById('calculated-system-volume');
   const step5Display = document.getElementById('ttd-step5');
@@ -384,6 +396,9 @@ const updateTtdCalculations = () => {
       )
       .join('');
   }
+
+  const areaTypeSelect = document.getElementById('ttd-area-type');
+  highlightTtdAreaType(areaTypeSelect ? areaTypeSelect.value : '');
 };
 
 const formatReferenceValue = (value, key, decimalsOverride = null) => {
@@ -656,7 +671,11 @@ function initialisePipeCalculator() {
       purgeHose:
         purgeHoseState && purgeHoseState.dn
           ? { dn: purgeHoseState.dn, length_m: purgeHoseState.length_m ?? '' }
-          : null
+          : null,
+      meterSelections: {
+        diaphragm: diaphragmSelect ? diaphragmSelect.value || null : null,
+        rotary: rotarySelect ? rotarySelect.value || null : null
+      }
     };
     const serialised = JSON.stringify(serialisable);
     if (serialised !== hiddenField.value) {
@@ -985,6 +1004,7 @@ function initialisePipeCalculator() {
       changed = true;
     }
     if (changed) {
+      persistSegments();
       updateSummary();
     }
   };
@@ -1021,6 +1041,8 @@ function initialisePipeCalculator() {
           }))
           .filter((segment) => segment.dn);
 
+      let storedMeterSelections = null;
+
       if (Array.isArray(parsed)) {
         pipeSegments = normaliseSegments(parsed);
         purgeHoseState = {
@@ -1045,12 +1067,28 @@ function initialisePipeCalculator() {
             length_m: ''
           };
         }
+        storedMeterSelections = parsed.meterSelections && typeof parsed.meterSelections === 'object'
+          ? parsed.meterSelections
+          : null;
       } else {
         pipeSegments = [];
         purgeHoseState = {
           dn: purgeHoseOptions[0] ?? null,
           length_m: ''
         };
+      }
+
+      if (storedMeterSelections) {
+        const storedDiaphragm =
+          typeof storedMeterSelections.diaphragm === 'string' ? storedMeterSelections.diaphragm : null;
+        const storedRotary =
+          typeof storedMeterSelections.rotary === 'string' ? storedMeterSelections.rotary : null;
+        if (storedDiaphragm && diaphragmSelect && diaphragmMeterOptions.includes(storedDiaphragm)) {
+          diaphragmSelect.value = storedDiaphragm;
+        }
+        if (storedRotary && rotarySelect && rotaryMeterOptions.includes(storedRotary)) {
+          rotarySelect.value = storedRotary;
+        }
       }
     } catch (error) {
       console.error('Could not parse stored pipe configuration', error);
@@ -1079,10 +1117,12 @@ function initialisePipeCalculator() {
   });
 
   diaphragmSelect.addEventListener('change', () => {
+    persistSegments();
     updateSummary();
   });
 
   rotarySelect.addEventListener('change', () => {
+    persistSegments();
     updateSummary();
   });
 
@@ -1307,6 +1347,21 @@ function initialisePurgeHelpers() {
     gaugeMovementInput.addEventListener('input', updateTtdCalculations);
   }
 
+  const ttdAreaTypeSelect = document.getElementById('ttd-area-type');
+  const updateTtdAreaSelection = () => {
+    if (ttdAreaTypeSelect && !ttdAreaTypeSelect.value && ttdAreaTypeSelect.options.length) {
+      ttdAreaTypeSelect.value = ttdAreaTypeSelect.options[0].value;
+    }
+    highlightTtdAreaType(ttdAreaTypeSelect ? ttdAreaTypeSelect.value : '');
+  };
+
+  if (ttdAreaTypeSelect) {
+    ttdAreaTypeSelect.addEventListener('change', updateTtdAreaSelection);
+    ttdAreaTypeSelect.addEventListener('input', updateTtdAreaSelection);
+    document.addEventListener('procedure-data-updated', updateTtdAreaSelection);
+    updateTtdAreaSelection();
+  }
+
   document.addEventListener('procedure-data-updated', updateTtdCalculations);
   updateTtdCalculations();
 }
@@ -1460,6 +1515,16 @@ if (exportButton) {
 const importButton = document.getElementById('import-procedure');
 if (importButton && importInput) {
   importButton.addEventListener('click', () => importInput.click());
+}
+
+const resetButton = document.getElementById('reset-form');
+if (resetButton) {
+  resetButton.addEventListener('click', () => {
+    const confirmed = window.confirm('Reset the procedure builder and remove all saved entries?');
+    if (!confirmed) return;
+    localStorage.removeItem(STORAGE_KEY);
+    applyInputData({});
+  });
 }
 
 const queryMode = new URLSearchParams(window.location.search).get('mode');

@@ -259,6 +259,21 @@ details summary {
   color: var(--accent);
 }
 
+#supporting-info-details {
+  background: rgba(0, 94, 165, 0.08);
+  border-left-color: var(--primary);
+}
+
+#supporting-info-details summary {
+  color: var(--primary);
+}
+
+.supporting-info-body {
+  margin-top: 0.75rem;
+  display: grid;
+  gap: 1.5rem;
+}
+
 .calculation-details table {
   width: 100%;
   border-collapse: collapse;
@@ -586,6 +601,15 @@ input.numeric-readonly:focus {
 .ttd-table input.numeric-readonly,
 .mplr-table input.numeric-readonly {
   background: #f8fafc;
+}
+
+.ttd-table tr[data-active='true'] {
+  background: rgba(0, 94, 165, 0.12);
+}
+
+.ttd-table tr[data-active='true'] th,
+.ttd-table tr[data-active='true'] td {
+  border-color: rgba(0, 94, 165, 0.25);
 }
 
 .mplr-table {
