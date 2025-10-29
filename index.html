@@ -335,6 +335,17 @@
                 <input id="ttd-room-volume" type="number" min="0" step="0.01" placeholder="Enter room volume" />
               </div>
               <div>
+                <label for="ttd-area-type">Area type</label>
+                <select id="ttd-area-type">
+                  <option value="type-a">Inadequately ventilated areas (Area type A)</option>
+                  <option value="type-b">Adequately ventilated internal areas of volume less than 60 m³ (Area Type B)</option>
+                  <option value="type-c">
+                    Adequately ventilated internal areas of volume 60 m³ or greater and external exposed areas (Area type C)
+                  </option>
+                  <option value="type-d">Underground (buried) (Area type D)</option>
+                </select>
+              </div>
+              <div>
                 <label for="ttd-from-above">TTD from above (minutes)</label>
                 <input id="ttd-from-above" type="number" min="0" step="0.01" placeholder="Enter TTD" />
               </div>
@@ -352,7 +363,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr>
+                <tr id="ttd-row-type-a" data-area-types="type-b">
                   <th scope="row">TTD new/existing Type A</th>
                   <td>
                     <input id="ttd-gas-type-a" type="text" class="numeric-readonly" readonly placeholder="Auto" />
@@ -361,7 +372,7 @@
                     <input id="ttd-n2-type-a" type="text" class="numeric-readonly" readonly placeholder="Auto" />
                   </td>
                 </tr>
-                <tr>
+                <tr id="ttd-row-type-cd" data-area-types="type-c,type-d">
                   <th scope="row">Existing Type C &amp; D</th>
                   <td>
                     <input id="ttd-gas-type-cd" type="text" class="numeric-readonly" readonly placeholder="Auto" />
@@ -370,7 +381,7 @@
                     <input id="ttd-n2-type-cd" type="text" class="numeric-readonly" readonly placeholder="Auto" />
                   </td>
                 </tr>
-                <tr>
+                <tr id="ttd-row-type-a-in" data-area-types="type-a">
                   <th scope="row">Existing in Type A</th>
                   <td>
                     <input id="ttd-gas-type-a-in" type="text" class="numeric-readonly" readonly placeholder="Auto" />
@@ -562,6 +573,7 @@
         <button type="button" id="print-procedure">Print / Save as PDF</button>
         <button type="button" id="export-procedure">Download JSON</button>
         <button type="button" id="import-procedure">Load JSON</button>
+        <button type="button" id="reset-form" class="secondary-button">Reset form</button>
         <input
           type="file"
           id="import-file"
@@ -574,42 +586,55 @@
 
     <section id="reference-info">
       <h2>8. Supporting Information</h2>
-      <div class="info-links">
-        <p>Reference material for further reading:</p>
-        <ul>
-          <li>
-            <a href="https://igem.org.uk/technical-services/standards-and-guidance/igemup1" target="_blank" rel="noopener noreferrer">
-              IGEM/UP/1 Edition 3 – Strength testing, tightness testing and direct purging of industrial and commercial gas installations
-            </a>
-          </li>
-          <li>
-            <a href="https://www.hse.gov.uk/gas/" target="_blank" rel="noopener noreferrer">UK Health and Safety Executive – Gas safety guidance</a>
-          </li>
-          <li>
-            <a href="https://www.nationalgas.com/safety" target="_blank" rel="noopener noreferrer">National Gas – Safety and emergency procedures</a>
-          </li>
-        </ul>
-      </div>
-      <div class="version-info">
-        <h3>Version traceability</h3>
-        <p>
-          Procedure builder version <strong id="app-version">—</strong><br />
-          Gas sizing dataset version <strong id="data-version">—</strong>
-        </p>
-        <p class="version-note">
-          Record these identifiers when printing or exporting so that any future corrections can be applied to the correct release.
-        </p>
-      </div>
-      <div class="reference-tables">
-        <h3>Reference tables</h3>
-        <p>
-          Open a table to review the IGEM/UP/1 data behind the calculator. Each table opens on demand so the main workflow stays
-          uncluttered on smaller screens.
-        </p>
-        <div id="igem-reference-table-container" class="reference-table-container">
-          <p>Reference tables load when JavaScript is available.</p>
+      <details id="supporting-info-details">
+        <summary>Show supporting resources</summary>
+        <div class="supporting-info-body">
+          <div class="info-links">
+            <p>Reference material for further reading:</p>
+            <ul>
+              <li>
+                <a href="https://igem.org.uk/technical-services/standards-and-guidance/igemup1" target="_blank" rel="noopener noreferrer">
+                  IGEM/UP/1 Edition 3 – Strength testing, tightness testing and direct purging of industrial and commercial gas installations
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://www.igem.org.uk/resource/ige-up-1-edition-2-a-2005-strength-testing-tightness-testing-direct-purging-of-industrial-and-commercial-gas-installations.html"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Purchase IGEM/UP/1 Edition 2 (A) 2005 – Strength testing, tightness testing &amp; direct purging
+                </a>
+              </li>
+              <li>
+                <a href="https://www.hse.gov.uk/gas/" target="_blank" rel="noopener noreferrer">UK Health and Safety Executive – Gas safety guidance</a>
+              </li>
+              <li>
+                <a href="https://www.nationalgas.com/safety" target="_blank" rel="noopener noreferrer">National Gas – Safety and emergency procedures</a>
+              </li>
+            </ul>
+          </div>
+          <div class="version-info">
+            <h3>Version traceability</h3>
+            <p>
+              Procedure builder version <strong id="app-version">—</strong><br />
+              Gas sizing dataset version <strong id="data-version">—</strong>
+            </p>
+            <p class="version-note">
+              Record these identifiers when printing or exporting so that any future corrections can be applied to the correct release.
+            </p>
+          </div>
+          <div class="reference-tables">
+            <h3>Reference tables</h3>
+            <p>
+              Open a table to review the IGEM/UP/1 data behind the calculator. Each table opens on demand so the main workflow stays uncluttered on smaller screens.
+            </p>
+            <div id="igem-reference-table-container" class="reference-table-container">
+              <p>Reference tables load when JavaScript is available.</p>
+            </div>
+          </div>
         </div>
-      </div>
+      </details>
     </section>
   </main>
 
